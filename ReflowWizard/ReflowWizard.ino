@@ -111,7 +111,7 @@
 
 
 // ***** INCLUDES *****
-#include <ControLeo2.h>
+#include "ControLeo2.h"
 #include "ReflowWizard.h"
 
 // ***** TYPE DEFINITIONS *****
