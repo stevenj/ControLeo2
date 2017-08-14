@@ -72,7 +72,8 @@ ISR(TIMER1_COMPA_vect)
         ServoPos += servoIncrement;
         
         if (((servoIncrement > 0) && (ServoPos > servoEndValue)) ||
-            ((servoIncrement < 0) && (ServoPos < servoEndValue)))
+            ((servoIncrement < 0) && (ServoPos < servoEndValue)) ||
+            (servoIncrement == 0))
         {
             ServoPos = servoEndValue;
         }
@@ -84,7 +85,7 @@ ISR(TIMER1_COMPA_vect)
 
 // Timer 1 Compare B interrrupt
 // This interrupt fires once the desired piulse duration has been sent to the servo
-ISR(TIMER1_COMPB_vect)
+ISR(TIMER1_COMPB_vect, ISR_NAKED)
 {
 #if (SERVO_OUTPUT == 3) 
     // Optimised Clear of the servo pin.
@@ -92,6 +93,7 @@ ISR(TIMER1_COMPB_vect)
 #else
     digitalWrite(SERVO_PIN, LOW);
 #endif            
+    reti();
 }
 
 
@@ -117,9 +119,14 @@ void setServoPosition(uint8_t servoDegrees, uint16_t timeToTake) {
     // If the servo is already in this position, then don't do anything
     currentEnd = (int16_t)OCR1B;
     if (newEnd != currentEnd) {
-        // Figure out the timer increment to achieve the end value
-        newStep = (newEnd - currentEnd) / (timeToTake / 20);
-        cli();
+        if (timeToTake != 0) {
+            // Figure out the timer increment to achieve the end value
+            newStep = (newEnd - currentEnd) / (timeToTake / 20);
+        } else {
+            // Immediate Update
+            newStep = 0;            
+        }
+        cli();                    // Prevent a Servo Pulse mid way through an update.
         servoEndValue = newEnd;   // The desired pulse width
         servoIncrement = newStep; // The amount to increase/decrease the pulse every interrupt
         sei();
