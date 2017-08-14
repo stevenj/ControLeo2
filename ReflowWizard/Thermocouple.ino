@@ -13,8 +13,6 @@
 volatile float recentTemperatures[NUM_READINGS];
 volatile int temperatureErrorCount = 0;
 volatile float temperatureError;
-ControLeo2_MAX31855 thermocouple;
-
 
 // This function is called every 200ms from the Timer 1 (servo) interrupt
 void takeCurrentThermocoupleReading()
@@ -23,7 +21,7 @@ void takeCurrentThermocoupleReading()
     
   // The timer has fired.  It has been 0.2 seconds since the previous reading was taken
   // Take a thermocouple reading
-  float temperature = thermocouple.readThermocouple(CELSIUS);
+  float temperature = temps.readThermocouple(2)/2;
   
   // Is there an error?
   if (THERMOCOUPLE_FAULT(temperature)) {

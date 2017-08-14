@@ -122,6 +122,7 @@
 
 ControLeo2_LiquidCrystal lcd;
 ControLeo2_Buttons buttons;
+ControLeo2_MAX31855 temps;
 
 int mode = 0;
 
@@ -211,7 +212,7 @@ void refresh()
     static unsigned long previous_time = 0;
     unsigned long current_time  = micros();
     
-    // temp.RefreshTemps();
+    temps.RefreshTemps();
     
     if ((current_time - previous_time) >= (1000000 / DISPLAY_REFRESH_RATE_HZ)) {
         // Get Latest Temperature Readings.
