@@ -1,4 +1,5 @@
 /*******************************************************************************
+ * HEAVILY MODIFIED VERSION
 * ControLeo Reflow Oven Controller
 * Author: Peter Easton
 * Website: whizoo.com
@@ -107,25 +108,34 @@
 *             higher than this.         
 *           - Minor tweaks to learning mode, to reduce number of times this needs to
 *             be run.
+* 3.0       Heavily Modified, Changes to UI and Multiple profiles added.            
+*           Eliminate Floating point.
 *******************************************************************************/
 
 
 // ***** INCLUDES *****
 #include "ControLeo2.h"
 #include "ReflowWizard.h"
+#include "MergedFlashData.h"
 
 // ***** TYPE DEFINITIONS *****
 
 ControLeo2_LiquidCrystal lcd;
+ControLeo2_Buttons buttons;
 
 int mode = 0;
 
 void setup() {
+  // Log data to the computer using USB
+  Serial.begin(115200); 
+  while (!Serial) { } // wait for serial port to connect. Needed for Leonardo only
+  
+  Serial.println(FM("Reflow Wizard - ControLeo2 Oven Controller - V3.0"));
+
   // *********** Start of ControLeo2 initialization ***********
   // Set up the buzzer and buttons
   pinMode(CONTROLEO_BUZZER_PIN, OUTPUT);
-  pinMode(CONTROLEO_BUTTON_TOP_PIN, INPUT_PULLUP);
-  pinMode(CONTROLEO_BUTTON_BOTTOM_PIN, INPUT_PULLUP);
+
   // Set the relays as outputs and turn them off
   // The relay outputs are on D4 to D7 (4 outputs)
   for (int i=4; i<8; i++) {
@@ -135,19 +145,39 @@ void setup() {
   // Set up the LCD's number of rows and columns 
   lcd.begin(16, 2);
   // Create the degree symbol for the LCD - you can display this with lcd.print("\1") or lcd.write(1)
-  unsigned char degree[8]  = {12,18,18,12,0,0,0,0};
+  unsigned char degree[8]  = 
+    {
+      B01100,
+      B10010,
+      B10010,
+      B01100,
+      B00000,
+      B00000,
+      B00000,
+      B00000,
+    };
+  unsigned char degreeC[8] = 
+    {
+      B01000,
+      B10100,
+      B01000,
+      B00110,
+      B01001,
+      B01000,
+      B01001,
+      B00110,
+    };
   lcd.createChar(1, degree);
+  lcd.createChar(2, degreeC);
   // *********** End of ControLeo2 initialization ***********
   
-  // Log data to the computer using USB
-  Serial.begin(57600);
   
   // Initialize the timer used to take thermocouple readings and control the servo
   initializeTimer();
 
   // Write the initial message on the LCD screen
-  lcdPrintLine_P(0, PSTR("   ControLeo2"));
-  lcdPrintLine_P(1, PSTR("Reflow Oven v2.0"));
+  lcdPrintLine_P(0, PSTRM("   ControLeo2"));
+  lcdPrintLine_P(1, PSTRM("Reflow Oven v3.0"));
   delay(100);
   playTones(TUNE_STARTUP);
   delay(3000);
@@ -159,33 +189,63 @@ void setup() {
   // Go straight to reflow menu if learning is complete
   if (getSetting(SETTING_LEARNING_MODE) == false)
     mode = 2;
-
-  Serial.println(F("ControLeo2 Reflow Oven controller v2.0"));
-  
+    
   // Make sure the oven door is closed
   setServoPosition(getSetting(SETTING_SERVO_CLOSED_DEGREES), 1000);
 }
 
 
 // The main menu has 4 options
-boolean (*action[NO_OF_MODES])() = {Testing, Config, Reflow, Bake};
-const char* modes[NO_OF_MODES] = {"Test Outputs?", "Setup?", "Start Reflow?", "Start Baking?"};
+const boolean (*action[NO_OF_MODES])() = {Testing, Config, Reflow, Bake};
+const char* const modes[NO_OF_MODES] PROGMEM = {("Test Outputs?"), 
+                                                ("Setup?"),
+                                                ("Start Reflow?"),
+                                                ("Start Baking?")};
 
+#define DISPLAY_REFRESH_RATE_HZ (20)
 
-// This loop is executed 20 times per second
+// Refresh Periodic tasks, Thermocouple reading, Screen Overlay, Screen Drawing, Key Handling
+void refresh()
+{
+    // Call this in the main loop, will cause display and temps to be updated as required.
+    static unsigned long previous_time = 0;
+    unsigned long current_time  = micros();
+    
+    // temp.RefreshTemps();
+    
+    if ((current_time - previous_time) >= (1000000 / DISPLAY_REFRESH_RATE_HZ)) {
+        // Get Latest Temperature Readings.
+        // Draw Temperature Overlay on screen.
+        //temp++; if (temp > 999) temp = 0;
+#if 0  
+        lcd.PrintInt(0,1,3,temp.readThermocouple(0));
+        lcd.setChar(3, 1, 0x01); // Temperature Marking (Degrees C)
+        lcd.setChar(4, 1, temp.readThermocoupleDrift()); // Temp Direction
+        
+        // Redraw screen.  
+        lcd.refresh();
+#endif        
+        previous_time = current_time;
+    }
+  
+    // Handle Button input processing.
+    buttons.ButtonProcessing();
+}
+
 void loop()
 {
   static boolean drawMenu = true;
   static boolean showMainMenu = true;
   static int counter = 0;
   static unsigned long nextLoopTime = 50; // Should be 3000 + 100 + fudge factor + 50 - but no harm making it 50!
-  
+
+  refresh();
   
   if (showMainMenu) {
     if (drawMenu) {
       drawMenu = false;
-      lcdPrintLine(0, modes[mode]);
-      lcdPrintLine_P(1, PSTR("          Yes ->"));
+      lcdPrintLine_P(0, modes[mode]);
+      lcdPrintLine_P(1, PSTRM("          Yes ->"));
     }
     
     // Update the temperature roughtly once per second
@@ -193,13 +253,13 @@ void loop()
       displayTemperature(getCurrentTemperature());
     
     // Get the button press to select the mode or move to the next mode
-    switch (getButton()) {
-    case CONTROLEO_BUTTON_TOP:
+    switch (buttons.GetKeypress()) {
+    case BUTTON_TOP_RELEASE:
       // Move to the next mode
       mode = (mode + 1) % NO_OF_MODES;
       drawMenu = true;
       break;
-    case CONTROLEO_BUTTON_BOTTOM:
+    case BUTTON_BOT_RELEASE:
       // Move to the selected mode
       showMainMenu = false;
       drawMenu = true;
@@ -217,46 +277,6 @@ void loop()
     delay(nextLoopTime - millis());
   nextLoopTime += 50;
 }
-
-
-// Determine if a button was pressed (with debounce)
-// A button can only be pressed once every 200ms. If a button is
-// pressed and held, a button press will be generated every 200ms.
-// Returns:
-//   CONTROLEO_BUTTON_NONE if no button are pressed
-//   CONTROLEO_BUTTON_TOP if the top button was pressed
-//   CONTROLEO_BUTTON_BOTTOM if the bottom button was pressed
-// Note: If both buttons are pressed simultaneously, CONTROLEO_BUTTON_TOP will be returned
-#define DEBOUNCE_INTERVAL  200
-
-int getButton()
-{
-  static long lastChangeMillis = 0;
-  long nowMillis = millis();
-  int buttonValue;
-  
-  // If insufficient time has passed, just return none pressed
-  if (lastChangeMillis + DEBOUNCE_INTERVAL > nowMillis)
-    return CONTROLEO_BUTTON_NONE;
-  
-  // Read the current button status
-  buttonValue = CONTROLEO_BUTTON_NONE;
-  if (digitalRead(CONTROLEO_BUTTON_TOP_PIN) == LOW) {
-    buttonValue = CONTROLEO_BUTTON_TOP;
-    playTones(TUNE_TOP_BUTTON_PRESS);
-  }
-  else if (digitalRead(CONTROLEO_BUTTON_BOTTOM_PIN) == LOW) {
-    buttonValue = CONTROLEO_BUTTON_BOTTOM;
-    playTones(TUNE_BOTTOM_BUTTON_PRESS);
-  }
-    
-  // Note the time the button was pressed
-  if (buttonValue != CONTROLEO_BUTTON_NONE)
-   lastChangeMillis = nowMillis;
-  
-  return buttonValue;
-}
-
 
 // Display a line on the LCD screen
 // The provided string is padded to take up the whole line

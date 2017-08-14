@@ -1,9 +1,13 @@
+#if 0
 /**** User Interface Inputs ****/
 #define ENCODER_A              0      // PD2/INT2
 #define ENCODER_B              1      // PD3/INT3
 #define BUTTON_BOTTOM          2      // PD1/INT1
 #define BUTTON_TOP            11      // PB7/PCINT7/OC1C/OC0A
 #define ENCODER_C             12      // PD6/T1/OC4D
+#endif
+
+#include "ControLeo2.h"
 
 const uint8_t encoder_states[8] PROGMEM = {
   // Specific to the Encoder on my oven, you will need to tweak to suit yours.

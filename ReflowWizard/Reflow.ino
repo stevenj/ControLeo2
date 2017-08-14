@@ -59,7 +59,7 @@ boolean Reflow() {
   }
   
   // Abort the reflow if a button is pressed
-  if (getButton() != CONTROLEO_BUTTON_NONE) {
+  if (buttons.GetKeypress() == BUTTON_BOT_LONG_HOLD) {
     reflowPhase = PHASE_ABORT_REFLOW;
     lcdPrintLine_P(0, PSTR("Aborting reflow"));
     lcdPrintLine_P(1, PSTR("Button pressed"));

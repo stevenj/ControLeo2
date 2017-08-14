@@ -16,7 +16,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include "Arduino.h"
-#include "ControLeo2_LiquidCrystal.h"
+#include "ControLeo2_LCD.h"
 
 
 // When the display powers up, it is configured as follows:

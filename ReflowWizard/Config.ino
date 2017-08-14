@@ -29,13 +29,13 @@ boolean Config() {
       }
   
       // Was a button pressed?
-      switch (getButton()) {
-        case CONTROLEO_BUTTON_TOP:
+      switch (buttons.GetKeypress()) {
+        case BUTTON_TOP_RELEASE:
           // Move to the next type
           type = (type+1) % NO_OF_TYPES;
           lcdPrintLine(1, outputDescription[type]);
           break;
-        case CONTROLEO_BUTTON_BOTTOM:
+        case BUTTON_BOT_RELEASE:
           // Save the type for this output
           setSetting(SETTING_D4_TYPE - 4 + output, type);
           // Go to the next output
@@ -65,15 +65,15 @@ boolean Config() {
       }
       
       // Was a button pressed?
-      switch (getButton()) {
-        case CONTROLEO_BUTTON_TOP:
+      switch (buttons.GetKeypress()) {
+        case BUTTON_TOP_RELEASE:
           // Increase the temperature
           maxTemperature++;
           if (maxTemperature > 280)
             maxTemperature = 175;
           displayMaxTemperature(maxTemperature);
           break;
-        case CONTROLEO_BUTTON_BOTTOM:
+        case BUTTON_BOT_RELEASE:
           // Save the temperature
           setSetting(SETTING_MAX_TEMPERATURE, maxTemperature);
           // Go to the next phase
@@ -93,8 +93,8 @@ boolean Config() {
       }
       
       // Was a button pressed?
-      switch (getButton()) {
-        case CONTROLEO_BUTTON_TOP:
+      switch (buttons.GetKeypress()) {
+        case BUTTON_TOP_RELEASE:
           // Should the servo increment change direction?
           if (servoDegrees >= 180)
             servoDegreesIncrement = -5;
@@ -106,7 +106,7 @@ boolean Config() {
           setServoPosition(servoDegrees, 200);
           displayServoDegrees(servoDegrees);
           break;
-        case CONTROLEO_BUTTON_BOTTOM:
+        case BUTTON_BOT_RELEASE:
           // Save the servo position
           setSetting(selectedServo, servoDegrees);
           // Go to the next phase.  Reset variables used in this phase
@@ -134,8 +134,8 @@ boolean Config() {
       }
 
       // Was a button pressed?
-      switch (getButton()) {
-        case CONTROLEO_BUTTON_TOP:
+      switch (buttons.GetKeypress()) {
+        case BUTTON_TOP_RELEASE:
           // Increase the temperature
           bakeTemperature += BAKE_TEMPERATURE_STEP;
           if (bakeTemperature > BAKE_MAX_TEMPERATURE)
@@ -144,7 +144,7 @@ boolean Config() {
           lcd.print(bakeTemperature);
           lcd.print("\1C ");
           break;
-        case CONTROLEO_BUTTON_BOTTOM:
+        case BUTTON_BOT_RELEASE:
           // Save the temperature
           setSetting(SETTING_BAKE_TEMPERATURE, bakeTemperature);
           // Go to the next phase
@@ -162,14 +162,14 @@ boolean Config() {
       }
 
       // Was a button pressed?
-      switch (getButton()) {
-        case CONTROLEO_BUTTON_TOP:
+      switch (buttons.GetKeypress()) {
+        case BUTTON_TOP_RELEASE:
           // Increase the duration
           bakeDuration++;
           bakeDuration %= BAKE_MAX_DURATION;
           displayDuration(0, getBakeSeconds(bakeDuration));
           break;
-        case CONTROLEO_BUTTON_BOTTOM:
+        case BUTTON_BOT_RELEASE:
           // Save the temperature
           setSetting(SETTING_BAKE_DURATION, bakeDuration);
           // Go to the next phase
@@ -192,13 +192,13 @@ boolean Config() {
       }
       
       // Was a button pressed?
-      switch (getButton()) {
-        case CONTROLEO_BUTTON_TOP:
+      switch (buttons.GetKeypress()) {
+        case BUTTON_TOP_RELEASE:
           // Turn learning mode on
           setSetting(SETTING_LEARNING_MODE, true);
           drawMenu = true;
           break;
-        case CONTROLEO_BUTTON_BOTTOM:
+        case BUTTON_BOT_RELEASE:
             // Go to the next phase
             setupPhase++;
        }
@@ -212,8 +212,8 @@ boolean Config() {
       }
       
       // Was a button pressed?
-      switch (getButton()) {
-        case CONTROLEO_BUTTON_TOP:
+      switch (buttons.GetKeypress()) {
+        case BUTTON_TOP_RELEASE:
           // Reset EEPROM to factory
           lcdPrintLine_P(0, PSTR("Please wait ..."));
           lcdPrintLine_P(1, PSTR(""));
@@ -221,7 +221,7 @@ boolean Config() {
           InitializeSettingsIfNeccessary();
 
           // Intentional fall-through
-        case CONTROLEO_BUTTON_BOTTOM:
+        case BUTTON_BOT_RELEASE:
             // Go to the next phase
             setupPhase++;
        }

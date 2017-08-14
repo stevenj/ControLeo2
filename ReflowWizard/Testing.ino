@@ -28,13 +28,13 @@ boolean Testing() {
   }
   
   // Was a button pressed?
-  switch (getButton()) {
-    case CONTROLEO_BUTTON_TOP:
+  switch (buttons.GetKeypress()) {
+    case BUTTON_TOP_RELEASE:
       // Toggle the output on and off
       channelIsOn = !channelIsOn;
       displayOnState(channelIsOn);
       break;
-    case CONTROLEO_BUTTON_BOTTOM:
+    case BUTTON_BOT_RELEASE:
       // Move to the next output
       channel = channel + 1;
       if (channel == 8) {

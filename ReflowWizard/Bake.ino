@@ -53,7 +53,7 @@ boolean Bake() {
   }
   
   // Abort the bake if a button is pressed
-  if (getButton() != CONTROLEO_BUTTON_NONE) {
+  if (buttons.GetKeypress() != BUTTON_BOT_LONG_HOLD) {
     bakePhase = BAKING_PHASE_ABORT;
     lcdPrintLine_P(0, PSTR("Aborting bake"));
     lcdPrintLine_P(1, PSTR("Button pressed"));
