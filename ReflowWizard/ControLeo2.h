@@ -51,18 +51,4 @@
 #include "ControLeo2_MAX31855.h"
 #include "Buttons.h"
 
-#if 0
-// Defines for the 2 buttons
-#define CONTROLEO_BUTTON_TOP_PIN     11  // Top button is on D11
-#define CONTROLEO_BUTTON_BOTTOM_PIN  2   // Bottom button is on D2
-#define CONTROLEO_BUTTON_NONE        0
-#define CONTROLEO_BUTTON_TOP         1  // S1
-#define CONTROLEO_BUTTON_BOTTOM      2  // S2
-#endif
-
-// The Buzzer is on D13
-#define CONTROLEO_BUZZER_PIN         13
-
-
-
 #endif // CONTROLEO2_H

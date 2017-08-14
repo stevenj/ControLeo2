@@ -117,6 +117,7 @@
 #include "ControLeo2.h"
 #include "ReflowWizard.h"
 #include "LcdFont.h"
+#include "Tones.h"
 
 // ***** TYPE DEFINITIONS *****
 
@@ -134,8 +135,6 @@ void setup() {
     Serial.println(FM("Reflow Wizard - ControLeo2 Oven Controller - V3.0"));
   
     // *********** Start of ControLeo2 initialization ***********
-    // Set up the buzzer and buttons
-    pinMode(CONTROLEO_BUZZER_PIN, OUTPUT);
   
     // Set the relays as outputs and turn them off
     // The relay outputs are on D4 to D7 (4 outputs)
@@ -143,6 +142,8 @@ void setup() {
         pinMode(i, OUTPUT);
         digitalWrite(i, LOW);
     }
+
+    initTones();
   
     lcd.defineCustomChars(custom_chars);
     

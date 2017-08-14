@@ -42,14 +42,6 @@ const char *outputDescription[NO_OF_TYPES] = {"Unused", "Top", "Bottom", "Boost"
 const char *phaseDescription[] = {"", "Presoak", "Soak", "Reflow", "Waiting", "Cooling", "Cool - open door", "Abort"};
 const char *bakingPhaseDescription[] = {"", "Heating", "Baking", "", "Cooling", ""};
 
-// Tunes used to indication various actions or status
-#define TUNE_STARTUP                         0
-#define TUNE_TOP_BUTTON_PRESS                1
-#define TUNE_BOTTOM_BUTTON_PRESS             2
-#define TUNE_REFLOW_DONE                     3
-#define TUNE_REMOVE_BOARDS                   4
-#define MAX_TUNES                            5
-
 // EEPROM settings
 // Remember that EEPROM initializes to 0xFF after flashing the bootloader
 #define SETTING_EEPROM_NEEDS_INIT             0    // EEPROM will be initialized to 0 at first run
