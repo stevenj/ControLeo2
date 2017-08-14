@@ -116,13 +116,13 @@
 // ***** INCLUDES *****
 #include "ControLeo2.h"
 #include "ReflowWizard.h"
-#include "MergedFlashData.h"
+#include "LcdFont.h"
 
 // ***** TYPE DEFINITIONS *****
 
-ControLeo2_LiquidCrystal lcd;
-ControLeo2_Buttons buttons;
-ControLeo2_MAX31855 temps;
+ControLeo2_LCD       lcd;
+ControLeo2_Buttons   buttons;
+ControLeo2_MAX31855  temps;
 
 int mode = 0;
 
@@ -143,33 +143,12 @@ void setup() {
     pinMode(i, OUTPUT);
     digitalWrite(i, LOW);
   }
-  // Set up the LCD's number of rows and columns 
-  lcd.begin(16, 2);
-  // Create the degree symbol for the LCD - you can display this with lcd.print("\1") or lcd.write(1)
-  unsigned char degree[8]  = 
-    {
-      B01100,
-      B10010,
-      B10010,
-      B01100,
-      B00000,
-      B00000,
-      B00000,
-      B00000,
-    };
-  unsigned char degreeC[8] = 
-    {
-      B01000,
-      B10100,
-      B01000,
-      B00110,
-      B01001,
-      B01000,
-      B01001,
-      B00110,
-    };
-  lcd.createChar(1, degree);
-  lcd.createChar(2, degreeC);
+
+  lcd.defineCustomChars(custom_chars);
+  
+  lcd.PrintStr(0,0, F("ReflowWiz - V3.0"));
+  lcd.ScrollLine(0,2,F("Reflow Wizard - ControLeo2 Oven Controller - V3.0"));
+
   // *********** End of ControLeo2 initialization ***********
   
   
@@ -211,21 +190,26 @@ void refresh()
     // Call this in the main loop, will cause display and temps to be updated as required.
     static unsigned long previous_time = 0;
     unsigned long current_time  = micros();
+    int16_t temperature;
     
     temps.RefreshTemps();
     
     if ((current_time - previous_time) >= (1000000 / DISPLAY_REFRESH_RATE_HZ)) {
         // Get Latest Temperature Readings.
         // Draw Temperature Overlay on screen.
-        //temp++; if (temp > 999) temp = 0;
-#if 0  
-        lcd.PrintInt(0,1,3,temp.readThermocouple(0));
-        lcd.setChar(3, 1, 0x01); // Temperature Marking (Degrees C)
-        lcd.setChar(4, 1, temp.readThermocoupleDrift()); // Temp Direction
+        // Temp is always shown in bottom left corner, and consumes 5 Characters.
+        temperature = temps.readThermocouple(0);
+        if (temperature < MAX_TEMPERATURE) {
+            lcd.PrintInt(0,1,3,temps.readThermocouple(0));
+            lcd.setChar(3, 1, 0x01); // Temperature Marking (Degrees C)
+            lcd.setChar(4, 1, temps.readThermocoupleDrift()); // Temp Direction
+        } else {
+            lcd.PrintStr(0,1,temps.getFaultStr());                      
+        }
         
         // Redraw screen.  
         lcd.refresh();
-#endif        
+
         previous_time = current_time;
     }
   
@@ -248,11 +232,7 @@ void loop()
       lcdPrintLine_P(0, modes[mode]);
       lcdPrintLine_P(1, PSTRM("          Yes ->"));
     }
-    
-    // Update the temperature roughtly once per second
-    if (counter++ % 20 == 0)
-      displayTemperature(getCurrentTemperature());
-    
+        
     // Get the button press to select the mode or move to the next mode
     switch (buttons.GetKeypress()) {
     case BUTTON_TOP_RELEASE:
@@ -284,36 +264,13 @@ void loop()
 // There is less flicker when overwriting characters on the screen, compared
 // to clearing the screen and writing new information
 void lcdPrintLine(int line, const char* str) {
-  char buffer[17] = "                ";
-  // Sanity check on the parameters
-  if (line < 0 || line > 1 || !str || strlen(str) > 16)
-    return;
-  lcd.setCursor(0, line);
-  strncpy(buffer, str, strlen(str));
-  lcd.print(buffer);
+  lcd.PrintStr(0,line, str);
 }
 // Same as above using PROGMEM to save SRAM
 // works with constant strings only
 void lcdPrintLine_P(int line, const char* str) {
-  char buffer[17] = "                ";
-  // Sanity check on the parameters
-  if (line < 0 || line > 1 || !str || strlen_P(str) > 16)
-    return;
-  lcd.setCursor(0, line);
-  strncpy_P(buffer, str, strlen_P(str));
-  lcd.print(buffer);
+  lcd.PrintStr(0,line, str);
 }
 
-// Displays the temperature in the bottom left corner of the LCD display
-void displayTemperature(double temperature) {
-  lcd.setCursor(0, 1);
-  if (THERMOCOUPLE_FAULT(temperature)) {
-    lcd.print("        ");
-    return;
-  }
-  lcd.print(temperature);
-  // Print degree Celsius symbol
-  lcd.print("\1C ");  
-}
 
 

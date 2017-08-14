@@ -21,9 +21,8 @@ boolean Config() {
     case 0:  // Set up the output types
       if (drawMenu) {
         drawMenu = false;
-        lcdPrintLine_P(0, PSTR("Dx is"));
-        lcd.setCursor(1, 0);
-        lcd.print(output);
+        lcd.PrintStr(0,0, FM("Dx is"));
+        lcd.PrintInt(1,0,1,output);
         type = getSetting(SETTING_D4_TYPE - 4 + output);
         lcdPrintLine(1, outputDescription[type]);
       }
@@ -41,10 +40,9 @@ boolean Config() {
           // Go to the next output
           output++;
           if (output != 8) {
-            lcd.setCursor(1, 0);
-            lcd.print(output);
+            lcd.PrintInt(1,0,1,output);
             type = getSetting(SETTING_D4_TYPE - 4 + output);
-            lcdPrintLine(1, outputDescription[type]);
+            lcd.PrintStr(2, 0, outputDescription[type]);
             break;
           }
           
@@ -128,9 +126,8 @@ boolean Config() {
         lcdPrintLine_P(0, PSTR("Bake temperature"));
         lcdPrintLine_P(1, PSTR(""));
         bakeTemperature = getSetting(SETTING_BAKE_TEMPERATURE);
-        lcd.setCursor(0, 1);
-        lcd.print(bakeTemperature);
-        lcd.print("\1C ");
+        lcd.PrintInt(0,1,3,bakeTemperature);
+        lcd.PrintStr(3,1,"\1C ");
       }
 
       // Was a button pressed?
@@ -140,9 +137,8 @@ boolean Config() {
           bakeTemperature += BAKE_TEMPERATURE_STEP;
           if (bakeTemperature > BAKE_MAX_TEMPERATURE)
             bakeTemperature = BAKE_MIN_TEMPERATURE;
-          lcd.setCursor(0, 1);
-          lcd.print(bakeTemperature);
-          lcd.print("\1C ");
+          lcd.PrintInt(0,1,3,bakeTemperature);
+          lcd.PrintStr(3,1,"\1C ");
           break;
         case BUTTON_BOT_RELEASE:
           // Save the temperature
@@ -242,33 +238,22 @@ boolean Config() {
 
 
 void displayMaxTemperature(int maxTemperature) {
-  lcd.setCursor(0, 1);
-  lcd.print(maxTemperature);
+  lcd.PrintInt(0,1,3,maxTemperature);
 }
 
 
 void displayServoDegrees(int degrees) {
-  lcd.setCursor(8, 1);
-  lcd.print(degrees);
-  lcd.print("\1 ");
+  lcd.PrintInt(8,1,3,degrees);
+  lcd.PrintStr(11,1,"\1 ");
 }
 
 
 void displayDuration(int offset, uint16_t duration) {
-  lcd.setCursor(offset, 1);
-  if (duration >= 3600) {
-    lcd.print((duration / 3600));
-    lcd.print("h ");
-  }
-  lcd.print((duration % 3600) / 60);
-  lcd.print("m ");
-
-  if (duration < 3600) {
-    lcd.print(duration % 60);
-    lcd.print("s ");
-  }
-
-  lcd.print("   ");
+  lcd.PrintInt(offset,1,2,duration/3600);
+  lcd.PrintStr(offset+2,1,":");
+  lcd.PrintInt(offset+3,1,2,(duration % 3600) / 60);
+  lcd.PrintStr(offset+5,0,":");
+  lcd.PrintInt(offset+6,1,2,(duration % 60));
 }
 
 

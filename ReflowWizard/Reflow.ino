@@ -383,9 +383,8 @@ boolean Reflow() {
       if (counter++ % 20 == 0) {
         displayReflowTemperature(currentTime, reflowStartTime, phaseStartTime, currentTemperature);
         // Countdown to the end of this phase
-        lcd.setCursor(13, 0);
-        lcd.print(40 - ((currentTime - phaseStartTime) / MILLIS_TO_SECONDS));
-        lcd.print("s ");
+        lcd.PrintInt(13,0,2,40 - ((currentTime - phaseStartTime) / MILLIS_TO_SECONDS));
+        lcd.PrintStr(15,0,"s");
       }
        
       // Wait in this phase for 40 seconds.  The maximum time in liquidous state is 150 seconds
@@ -532,9 +531,6 @@ void serialDisplayPhaseData(int phase, struct phaseData *pd, int *outputType) {
 
 // Display the current temperature to the LCD screen and print it to the serial port so it can be plotted
 void displayReflowTemperature(unsigned long currentTime, unsigned long startTime, unsigned long phaseTime, double temperature) {
-  // Display the temperature on the LCD screen
-  displayTemperature(temperature);
-
   // Write the time and temperature to the serial port, for graphing or analysis on a PC
   sprintf(debugBuffer, "%ld, %ld, ", (currentTime - startTime) / MILLIS_TO_SECONDS, (currentTime - phaseTime) / MILLIS_TO_SECONDS);
   Serial.print(debugBuffer);

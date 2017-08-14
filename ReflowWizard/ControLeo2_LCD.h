@@ -3,89 +3,78 @@
 //
 // Change History:
 // 14 August 2014        Initial Version
+//  1 August 2017        Steven Johnson
+//                       Rewritten to act like a refreshed frame buffer.
+//                       Provide an ability to show scrolling long messages on one line at a time.
+//                       Need to call "refresh" at an appropriate interval to allow the screen to redraw
+//                       20 times a second is more than fast enough.
+//                       
 
-#ifndef CONTROLEO2_LiquidCrystal_h
-#define CONTROLEO2_LiquidCrystal_h
+#ifndef CONTROLEO2_LCD_h
+#define CONTROLEO2_LCD_h
 
-#include <inttypes.h>
-#include "Print.h"
+class ControLeo2_LCD {
+  public:
+      ControLeo2_LCD(void);
 
-// Commands
-#define LCD_CLEARDISPLAY 0x01
-#define LCD_RETURNHOME 0x02
-#define LCD_ENTRYMODESET 0x04
-#define LCD_DISPLAYCONTROL 0x08
-#define LCD_CURSORSHIFT 0x10
-#define LCD_FUNCTIONSET 0x20
-#define LCD_SETCGRAMADDR 0x40
-#define LCD_SETDDRAMADDR 0x80
+      void clear(void);
+      
+      void PrintStr(uint8_t x, uint8_t y, const char* str);
+      void PrintStr(uint8_t x, uint8_t y, const __FlashStringHelper* str);
 
-// Flags for display entry mode
-#define LCD_ENTRYRIGHT 0x00
-#define LCD_ENTRYLEFT 0x02
-#define LCD_ENTRYSHIFTINCREMENT 0x01
-#define LCD_ENTRYSHIFTDECREMENT 0x00
+      void PrintInt(uint8_t x, uint8_t y, uint8_t width, uint16_t value, char fill);
+      void PrintInt(uint8_t x, uint8_t y, uint8_t width, uint16_t value);
 
-// Flags for display on/off control
-#define LCD_DISPLAYON 0x04
-#define LCD_DISPLAYOFF 0x00
-#define LCD_CURSORON 0x02
-#define LCD_CURSOROFF 0x00
-#define LCD_BLINKON 0x01
-#define LCD_BLINKOFF 0x00
+      void ScrollLine(uint8_t y, uint8_t rpt, const __FlashStringHelper* str);
 
-// Flags for display/cursor shift
-#define LCD_DISPLAYMOVE 0x08
-#define LCD_CURSORMOVE 0x00
-#define LCD_MOVERIGHT 0x04
-#define LCD_MOVELEFT 0x00
+      void CursorOff(void);
+      void CursorOn(uint8_t x, uint8_t y, bool blink, bool underline);
+      void CursorOn(uint8_t x, uint8_t y, bool blink);
+      void CursorOn(uint8_t x, uint8_t y);
+      
+      void ScreenOff(void);
+      void ScreenOn(void);
 
-// Flags for function set
-#define LCD_8BITMODE 0x10
-#define LCD_4BITMODE 0x00
-#define LCD_2LINE 0x08
-#define LCD_1LINE 0x00
-#define LCD_5x10DOTS 0x04
-#define LCD_5x8DOTS 0x00
+      void setChar(uint8_t x, uint8_t y, uint8_t character);
+  
+      void defineCustomChars(const uint8_t *charmap);
 
+      void refresh(void);
+      
+      void send(uint8_t, uint8_t);
+      
+  private:      
+      void upload_charset(const uint8_t *charmap);
+      void write4bits(uint8_t);
+      
+      uint8_t _displaycontrol;
 
-class ControLeo2_LiquidCrystal : public Print {
-public:
-    ControLeo2_LiquidCrystal(void);
-    
-    void begin(uint8_t cols, uint8_t rows, uint8_t charsize = LCD_5x8DOTS);
-    
-    void clear();
-    void home();
-    void setCursor(uint8_t, uint8_t);
-    void noDisplay();
-    void display();
-    void noCursor();
-    void cursor();
-    void noBlink();
-    void blink();
-    void scrollDisplayLeft();
-    void scrollDisplayRight();
-    void leftToRight();
-    void rightToLeft();
-    void autoscroll();
-    void noAutoscroll();
-    
-    void createChar(uint8_t, uint8_t[]);
-    virtual size_t write(uint8_t);
-    void command(uint8_t);
-    
-private:
-    void send(uint8_t, uint8_t);
-    void write4bits(uint8_t);
-    
-    uint8_t _rs_pin;        // LOW: command.  HIGH: character.
-    uint8_t _enable_pin;    // Activated by a HIGH pulse.
-    uint8_t _data_pins[8];
-    uint8_t _displayfunction;
-    uint8_t _displaycontrol;
-    uint8_t _displaymode;
-    uint8_t _numlines,_currline;
+      const uint8_t *_custom_chars; // Address of Standard mode Custom Characters in Flash.
+
+      union
+      {
+        uint8_t _cursor_xy;
+        struct {
+          uint8_t _cursor_x:4;  // X Position of Cursor on a Line (0-15)
+          uint8_t _cursor_y:1;  // Y Position of Cursor (Line) (0 or 1)
+          bool _cursor_blink:1; // Blink character at Cursor, or not.
+          bool _cursor_on:1;    // Is the Cursor Displayed or Not.
+          bool _screen_on:1;    // Is the Screen Displayed or Not.
+        };
+      };
+
+      uint8_t _frame_buffer[2][16];
+      uint8_t *_scroll_msg;               // Scrolling message
+      union
+      {
+        uint8_t _scroll_line_rpt;         // Bit 7 = Line, Bit 0-6 = Number of times to show it. (0 = Off, 127 = Forever)
+        struct {
+          uint8_t _scroll_rpt:7;          // Repeat Counter
+          uint8_t _scroll_line:1;         // Scroll Line
+        };
+      };
+      int8_t  _scroll_x;                // Position of Scroll. -16 -> -1 = Spaces, 0 -> _scroll_size = Characters from the buffer
+                                        // Because its signed, maximum practical line size is 126 Characters.
 };
 
-#endif //CONTROLEO2_LiquidCrystal_h
+#endif //CONTROLEO2_LCD_h

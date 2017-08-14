@@ -18,6 +18,9 @@
 #define FAULT_SHORT_GND 0x42
 #define FAULT_SHORT_VCC 0x44
 #define FAULT_UNKNOWN   0x4F
+#define FAULT_OVERTEMP  0xFF
+
+#define MAX_TEMPERATURE (700)  // Maximum Temp is 700 Degress, over that is an error.
 
 class ControLeo2_MAX31855
 {
@@ -33,6 +36,7 @@ public:
     uint8_t  readJunctionDrift(void);
 
     uint8_t  getFault(void);
+    const __FlashStringHelper* getFaultStr(void);
     
 private:
     int16_t _RawTemp[4];

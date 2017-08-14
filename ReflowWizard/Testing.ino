@@ -48,8 +48,7 @@ boolean Testing() {
         // Return to the main menu
         return false;
       }
-      lcd.setCursor(7, 1);
-      lcd.print(channel);
+      lcd.PrintInt(7,1,1,channel);
       displayOnState(channelIsOn);
       break;
   }
@@ -60,6 +59,5 @@ boolean Testing() {
 
 
 void displayOnState(boolean isOn) {
-  lcd.setCursor(9, 1);
-  lcd.print(isOn? "is on ": "is off");
+  lcd.PrintStr(9,1, isOn? "is on ": "is off");
 }

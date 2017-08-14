@@ -129,6 +129,29 @@ uint8_t ControLeo2_MAX31855::getFault(void)
     return _fault;
 }
 
+/*******************************************************************************
+* Name: getFaultStr
+* Description: get Temperature Reading Fault as a short string (5 Characters).
+*
+* Return      Description
+* =========   ===========
+* fault       None, Empty String
+*             No Thermocouple = "MISNG"
+*             Short to GND    = "SHT-G"
+*             Short to VCC    = "SHT-V"
+*             OverTemp        = "OVERT"
+*             Unknown         = "?ERR?"
+*
+*******************************************************************************/
+const __FlashStringHelper* ControLeo2_MAX31855::getFaultStr(void)
+{
+    if      (_fault == FAULT_NONE)      return FM("");
+    else if (_fault == FAULT_OPEN)      return FM("MISNG");
+    else if (_fault == FAULT_SHORT_GND) return FM("SHT-G");
+    else if (_fault == FAULT_OVERTEMP)  return FM("OVERT");
+    return FM("?ERR?");
+}
+
 // Read and average a temperature Array.
 int16_t  ControLeo2_MAX31855::_readTemp(int16_t Temps[],uint8_t shift)
 {
@@ -159,9 +182,10 @@ uint8_t ControLeo2_MAX31855::_calcDrift(int16_t Temps[])
 *               Minimum clock width is 100 ns. No delay is required in this case.
 *******************************************************************************/
 void ControLeo2_MAX31855::RefreshTemps(void) {
-    int     bitCount;
-    int16_t temp;
-    uint32_t current_time = micros();
+    int            bitCount;
+    int16_t        temp;
+    uint32_t       current_time = micros();
+    static uint8_t fault_count = 0;
   
     if ((current_time - _last_temp_time) >= THERMOCOUPLE_CONVERSION_RATE) {
         _last_temp_time = current_time;
@@ -200,16 +224,37 @@ void ControLeo2_MAX31855::RefreshTemps(void) {
 
             // Save Temps once fully assembled.
             if (bitCount == 16) {
-                _RawTemp[_nexttemp] = temp;  
+                if (_fault == 0x00) { // Dont store temps when a fault occurs
+                  if (temp <= (MAX_TEMPERATURE*4)) {
+                      _RawTemp[_nexttemp] = temp;  
+                  } else {
+                    _fault = FAULT_OVERTEMP;
+                  }
+                }                  
                 temp = 0;
             } else if (bitCount == 0) {
-                _RawJunctionTemp[_nexttemp] = temp;    
+                if (_fault == 0x00) { // Dont store temps when a fault occurs
+                  _RawJunctionTemp[_nexttemp] = temp;    
+                }
             }
             
             digitalWrite(THERMOCOUPLE_CLK_PIN, LOW);
         }
+
+        if (_fault != 0x00) {
+            if (fault_count < 4) {
+              _fault = 0x00; // Only record the fault
+              fault_count++;
+            } else if (fault_count == 5) {
+              _RawTemp[_nexttemp] == (MAX_TEMPERATURE*4) + 1;
+              _nexttemp = (_nexttemp+1) & 0x3; // Step through readings arrays.
+              fault_count++;
+            }
+        } else {
+          fault_count = 0;
+          _nexttemp = (_nexttemp+1) & 0x3; // Step through readings arrays.
+        }
         
-        _nexttemp = (_nexttemp+1) & 0x3; // Step through readings arrays.
         _Tdrift = _calcDrift(_RawTemp);
         _Jdrift = _calcDrift(_RawJunctionTemp);
         

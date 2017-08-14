@@ -284,8 +284,6 @@ boolean Bake() {
 // Display the current temperature to the LCD screen and print it to the serial port so it can be plotted
 void DisplayBakeTime(uint16_t duration, double temperature, int duty, int integral) {
   // Display the temperature on the LCD screen
-  displayTemperature(temperature);
-
   // Write the time and temperature to the serial port, for graphing or analysis on a PC
   sprintf(debugBuffer, "%u, %i, %i, ", duration, duty, integral);
   Serial.print(debugBuffer);

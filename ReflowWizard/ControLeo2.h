@@ -46,6 +46,7 @@
 /**** Piezo Buzzer Output ****/
 #define BUZZER_OUTPUT         13      // PC7/OC4A
 
+#include "MergedFlashData.h"
 #include "ControLeo2_LCD.h"
 #include "ControLeo2_MAX31855.h"
 #include "Buttons.h"
