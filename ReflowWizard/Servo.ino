@@ -9,7 +9,6 @@
 // The servo position information should be sent every 20ms, or 50 times per second.  To do this:
 //   - Timer 1 is set to CTC mode
 //   - Compare A is set to a value to force a timer interrupt every 20ms
-// For every 10 times the timer fires, a call is made to get a thermocouple reading.
 // If servo movement is enabled (interrupt on Compare B, OCIE1B is set) then the servo pin
 // is set high.  It must be lowered somewhere between 1ms and 2ms later, depending on the desired
 // position.  To do this, the appropriate value is written to OCR1B.  Keep in mind that unlike
@@ -17,7 +16,7 @@
 //   a. Counter = 0: Write servo pin HIGH, and set Compare B to correct duration.
 //   b. Counter = Compare B: Write servo pin low
 //   c. Counter = Compare A: Counter is set back to 0 (go to a.)
-// Once the servo has reached the desired position, the Compare B interrupt is disabled
+// Once the servo has reached the desired position, the Compare B continues to generate a pulse the appropriate width
 //
 // With a 16MHz clock, the prescaler is set to 8.  This gives a timer speed of 16,000,000 / 8 = 2,000,000. This means
 // the timer counts from 0 to 2,000,000 in one second.  We'd like the interrupt to fire 50 times per second so we set
@@ -34,7 +33,7 @@ int16_t  servoIncrement;      // The amount to increase/decrease the pulse every
 // Initialize Timer 1
 // This timer controls the servo
 // It should fire 50 times every second (every 20ms)
-void initializeTimer(void) {
+void initializeServo(void) {
   cli();                               // Disable global interrupts
   TCCR1A =  0;                         // Timer 0 is independent of the I/O pins, CTC mode
   TCCR1B =  _BV(WGM12) + _BV(CS11);    // Timer 0 CTC mode, prescaler is 64

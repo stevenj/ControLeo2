@@ -127,51 +127,52 @@ ControLeo2_MAX31855  temps;
 int mode = 0;
 
 void setup() {
-  // Log data to the computer using USB
-  Serial.begin(115200); 
-  while (!Serial) { } // wait for serial port to connect. Needed for Leonardo only
-  
-  Serial.println(FM("Reflow Wizard - ControLeo2 Oven Controller - V3.0"));
-
-  // *********** Start of ControLeo2 initialization ***********
-  // Set up the buzzer and buttons
-  pinMode(CONTROLEO_BUZZER_PIN, OUTPUT);
-
-  // Set the relays as outputs and turn them off
-  // The relay outputs are on D4 to D7 (4 outputs)
-  for (int i=4; i<8; i++) {
-    pinMode(i, OUTPUT);
-    digitalWrite(i, LOW);
-  }
-
-  lcd.defineCustomChars(custom_chars);
-  
-  lcd.PrintStr(0,0, F("ReflowWiz - V3.0"));
-  lcd.ScrollLine(0,2,F("Reflow Wizard - ControLeo2 Oven Controller - V3.0"));
-
-  // *********** End of ControLeo2 initialization ***********
-  
-  
-  // Initialize the timer used to take thermocouple readings and control the servo
-  initializeTimer();
-
-  // Write the initial message on the LCD screen
-  lcdPrintLine_P(0, PSTRM("   ControLeo2"));
-  lcdPrintLine_P(1, PSTRM("Reflow Oven v3.0"));
-  delay(100);
-  playTones(TUNE_STARTUP);
-  delay(3000);
-  
-  // Initialize the EEPROM, after flashing bootloader
-  InitializeSettingsIfNeccessary();
-  lcd.clear();
-  
-  // Go straight to reflow menu if learning is complete
-  if (getSetting(SETTING_LEARNING_MODE) == false)
-    mode = 2;
+    // Log data to the computer using USB
+    Serial.begin(115200); 
+    while (!Serial) { } // wait for serial port to connect. Needed for Leonardo only
     
-  // Make sure the oven door is closed
-  setServoPosition(getSetting(SETTING_SERVO_CLOSED_DEGREES), 1000);
+    Serial.println(FM("Reflow Wizard - ControLeo2 Oven Controller - V3.0"));
+  
+    // *********** Start of ControLeo2 initialization ***********
+    // Set up the buzzer and buttons
+    pinMode(CONTROLEO_BUZZER_PIN, OUTPUT);
+  
+    // Set the relays as outputs and turn them off
+    // The relay outputs are on D4 to D7 (4 outputs)
+    for (int i=4; i<8; i++) {
+        pinMode(i, OUTPUT);
+        digitalWrite(i, LOW);
+    }
+  
+    lcd.defineCustomChars(custom_chars);
+    
+    lcd.PrintStr(0,0, F("ReflowWiz - V3.0"));
+    lcd.ScrollLine(0,2,F("Reflow Wizard - ControLeo2 Oven Controller - V3.0"));
+    
+    // Initialize the timer used to control the servo
+    initializeServo();
+  
+    // Write the initial message on the LCD screen
+    lcdPrintLine_P(0, PSTRM("   ControLeo2"));
+    lcdPrintLine_P(1, PSTRM("Reflow Oven v3.0"));
+    delay(100);
+    playTones(TUNE_STARTUP);
+    delay(3000);
+    
+    // Initialize the EEPROM, after flashing bootloader
+    InitializeSettingsIfNeccessary();
+    lcd.clear();
+    
+    // Go straight to reflow menu if learning is complete
+    if (getSetting(SETTING_LEARNING_MODE) == false)
+        mode = 2;
+      
+    // Make sure the oven door is closed
+    setServoPosition(getSetting(SETTING_SERVO_CLOSED_DEGREES), 1000);
+  
+  
+    // *********** End of ControLeo2 initialization ***********
+  
 }
 
 
