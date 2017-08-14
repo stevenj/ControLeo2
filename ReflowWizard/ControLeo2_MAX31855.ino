@@ -246,7 +246,7 @@ void ControLeo2_MAX31855::RefreshTemps(void) {
               _fault = 0x00; // Only record the fault
               fault_count++;
             } else if (fault_count == 5) {
-              _RawTemp[_nexttemp] == (MAX_TEMPERATURE*4) + 1;
+              _RawTemp[_nexttemp] = (MAX_TEMPERATURE*4) + 1;
               _nexttemp = (_nexttemp+1) & 0x3; // Step through readings arrays.
               fault_count++;
             }
