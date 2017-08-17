@@ -12,9 +12,9 @@
  * \brief Main code file for MD_Menu library
  */
 MD_Menu::MD_Menu(cbUserNav cbNav, cbUserDisplay cbDisp,
-                mnuHeader_t *mnuHdr, uint8_t mnuHdrCount,
-                mnuItem_t *mnuItm, uint8_t mnuItmCount,
-                mnuInput_t *mnuInp, uint8_t mnuInpCount) :
+                const mnuHeader_t *mnuHdr, uint8_t mnuHdrCount,
+                const mnuItem_t *mnuItm, uint8_t mnuItmCount,
+                const mnuInput_t *mnuInp, uint8_t mnuInpCount) :
                 _mnuHdr(mnuHdr), _mnuHdrCount(mnuHdrCount),
                 _mnuItm(mnuItm), _mnuItmCount(mnuItmCount),
                 _mnuInp(mnuInp), _mnuInpCount(mnuInpCount),

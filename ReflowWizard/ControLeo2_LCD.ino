@@ -175,10 +175,11 @@ extern char *ltostr(char *buf, uint8_t bufLen, int32_t v, uint8_t base, bool lea
 void ControLeo2_LCD::PrintInt(uint8_t x, uint8_t y, uint8_t width, uint16_t value, char fill) {
     
 #if 1  
+    //  Reuse ltostr from MD_Menu, rather than our own function, saves ROM space.
     if (x + width >= 16) {
       width = 16 - x;
     }
-    ltostr(&_frame_buffer[y][x], width, value, 10, (fill == '0'));
+    ltostr((char*)&_frame_buffer[y][x], width, value, 10, (fill == '0'));
 #else  
     char    character;
     uint8_t digit = width;
