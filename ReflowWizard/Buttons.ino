@@ -105,11 +105,17 @@ uint32_t ControLeo2_Buttons::ProcessButton(uint8_t mask, uint8_t buttons, uint8_
     // Process Button
     if ((_stable_buttons & mask) != (buttons & mask)) {
         if ((buttons & mask) == 0x00) {
+            // KEYPRESS          
             push_keypress_on_queue(BaseEvent);
             start_time = current_time;
         } else {
-            push_keypress_on_queue(BaseEvent+1);
-            start_time = 0;                  
+            // RELEASE
+            if (start_time == 0) {  // LONG HOLD RELEASE
+                push_keypress_on_queue(BaseEvent+3);
+            } else { // SHORT PRESS RELEASE
+                push_keypress_on_queue(BaseEvent+1);              
+                start_time = 0;                  
+            }
         }
     }  
 
@@ -215,7 +221,9 @@ void ControLeo2_Buttons::ButtonProcessing(void) {
               }
           }
 #else
+          // Process Top Button
           _top_press_start = ProcessButton(0x80, buttons, BUTTON_TOP_PRESS, current_time, _top_press_start);
+          // Process Bottom Button
           _bot_press_start = ProcessButton(0x02, buttons, BUTTON_BOT_PRESS, current_time, _bot_press_start);
 #endif
 

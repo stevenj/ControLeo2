@@ -2,14 +2,19 @@
 #define __BUTTONS__
 
 #define NO_BUTTON_PRESSED       (0x00)
+
 #define BUTTON_TOP_PRESS        (0x01)
 #define BUTTON_TOP_RELEASE      (0x02)
 #define BUTTON_TOP_LONG_HOLD    (0x03)
-#define BUTTON_BOT_PRESS        (0x04)
-#define BUTTON_BOT_RELEASE      (0x05)
-#define BUTTON_BOT_LONG_HOLD    (0x06)
-#define ENCODER_INC             (0x07)
-#define ENCODER_DEC             (0x08)
+#define BUTTON_TOP_LONG_RELEASE (0x04)
+
+#define BUTTON_BOT_PRESS        (0x05)
+#define BUTTON_BOT_RELEASE      (0x06)
+#define BUTTON_BOT_LONG_HOLD    (0x07)
+#define BUTTON_BOT_LONG_RELEASE (0x08)
+
+#define ENCODER_INC             (0x09)
+#define ENCODER_DEC             (0x0A)
 
 class ControLeo2_Buttons {
   public:

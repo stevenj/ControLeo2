@@ -170,7 +170,16 @@ void ControLeo2_LCD::PrintStr(uint8_t x, uint8_t y, const __FlashStringHelper* s
     }
 }
 
+extern char *ltostr(char *buf, uint8_t bufLen, int32_t v, uint8_t base, bool leadZero = false);
+
 void ControLeo2_LCD::PrintInt(uint8_t x, uint8_t y, uint8_t width, uint16_t value, char fill) {
+    
+#if 1  
+    if (x + width >= 16) {
+      width = 16 - x;
+    }
+    ltostr(&_frame_buffer[y][x], width, value, 10, (fill == '0'));
+#else  
     char    character;
     uint8_t digit = width;
     while (digit > 0) {
@@ -188,6 +197,7 @@ void ControLeo2_LCD::PrintInt(uint8_t x, uint8_t y, uint8_t width, uint16_t valu
         digit--;
         setChar(x+digit, y, character);
     }
+#endif    
 }
 
 void ControLeo2_LCD::PrintInt(uint8_t x, uint8_t y, uint8_t width, uint16_t value) {
