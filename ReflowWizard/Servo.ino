@@ -23,33 +23,62 @@
 // the compare register OCR1A to 2,000,000 / 50 = 40,000.
 #include "ControLeo2.h"
 
-#define MIN_PULSE_WIDTH       544     // The shortest pulse sent to a servo (from Arduino's servo library)
-#define MAX_PULSE_WIDTH      2400     // The longest pulse sent to a servo (from Arduino's servo library)
+#define SERVO_CLK (16000000)
+#define SERVO_PS  (8)
+#define SERVO_HZ  (50)
+#define SERVO_PERIOD ((SERVO_CLK/SERVO_PS) / SERVO_HZ)
+
+#define SERVO_MS_PER_S (1000)
+#define SERVO_MIN_MS   (1)
+#define SERVO_MAX_MS   (2)
+
+#define SERVO_CLK_PER_MS ((SERVO_CLK/SERVO_PS) / SERVO_MS_PER_S)
+
+#define MIN_PULSE_WIDTH   (SERVO_CLK_PER_MS * SERVO_MIN_MS)
+#define MAX_PULSE_WIDTH   (SERVO_CLK_PER_MS * SERVO_MAX_MS)
+
+// #define MIN_PULSE_WIDTH       544     // The shortest pulse sent to a servo (from Arduino's servo library)
+// #define MAX_PULSE_WIDTH      2400     // The longest pulse sent to a servo (from Arduino's servo library)
 
 // Variables used to control servo movement
-uint16_t servoEndValue;       // The desired pulse width
-int16_t  servoIncrement;      // The amount to increase/decrease the pulse every interrupt
+static uint16_t servoEndValue;       // The desired pulse width
+static int16_t  servoIncrement;      // The amount to increase/decrease the pulse every interrupt
 
 // Initialize Timer 1
 // This timer controls the servo
 // It should fire 50 times every second (every 20ms)
 void initializeServo(void) {
+  Serial.println("Starting Servo");
+
+  // Set the servo pin as output - Servo Disabled (Low Pulse)
+  pinMode(SERVO_OUTPUT, OUTPUT);
+  digitalWrite(SERVO_OUTPUT, LOW);
+
+  // Put the Servo into the configured Retracted position.
+  servoEndValue = degreesToTimerCounter(readGlobalSetting(SG_SERVO_RETRACT_DEG));
+  // servoEndValue = (MIN_PULSE_WIDTH + MAX_PULSE_WIDTH) /2 ;
+  servoIncrement = 0;
+
   cli();                               // Disable global interrupts
-  TCCR1A =  0;                         // Timer 0 is independent of the I/O pins, CTC mode
-  TCCR1B =  _BV(WGM12) + _BV(CS11);    // Timer 0 CTC mode, prescaler is 64
-  TCNT1  =  0;                         // Clear the timer count 
-  OCR1A  =  40000;                     // Set compare match so the interrupt occurs 50 times per second
-  TIMSK1 = _BV(OCIE1A) | _BV(OCIE1B);  // Enable timer compare interrupt
+  TCCR1A =  0x00;                      // COM1x1/COM1x0 = 00 = Normal port operation, OCnA/OCnB/OCnC disconnected
+                                       // WGM11/WGM10 = 00
+  
+  TCCR1B =  _BV(WGM12) + _BV(CS11);    // WGM3210 = 0100 = Clear Timer on Compare with OCR1A 
+                                       // ICNC1 = 0 = Input Capture Noise Canceler DISABLED
+                                       // ICES1 = 0 = Input Capture Falling Edge (UNUSED)
+                                       // CS12/CS11/CS10 = 010 = PRESCALE CLK DIV 8
+                                       
+  TCNT1  =  0x0000;                    // Clear the timer count 
+  
+  OCR1A  =  SERVO_PERIOD;              // Set compare match so the interrupt occurs 50 times per second
+  OCR1B  =  servoEndValue;             // Default Servo starting position. 
+  
+  TIMSK1 = _BV(OCIE1A) | _BV(OCIE1B);  // IRQ when Timer = OCR1A & OCR1B
+  
   sei();                               // Enable global interrupts
 
-  // Set the servo pin as output - Servo Disabled (High Pulse)
-  pinMode(SERVO_OUTPUT, OUTPUT);
-  digitalWrite(SERVO_OUTPUT, HIGH);
+  Serial.println("Servo Hardware Initialised"); 
   
-  // Assume the servo is close to the closed position
-  servoEndValue = degreesToTimerCounter(getSetting(SETTING_SERVO_CLOSED_DEGREES) + 1);
-  OCR1B = servoEndValue;
-  servoIncrement = 0;
 }
 
 // Timer 1 ISR
@@ -57,13 +86,15 @@ void initializeServo(void) {
 ISR(TIMER1_COMPA_vect)
 { 
     uint16_t ServoPos;
+
+    //digitalWrite(4, HIGH);    // Test Output to see if ISR fires.
     
     // Write the servo signal pin high.  This is lowered when Compare B fires
 #if (SERVO_OUTPUT == 3) 
     // Optimised set of the servo pin.
-    PORTD |= 0x08;
+    PORTD |= 0x01;
 #else
-    digitalWrite(SERVO_PIN, HIGH);
+    digitalWrite(SERVO_OUTPUT, HIGH);
 #endif            
 
     ServoPos = (uint16_t)OCR1B;
@@ -83,31 +114,26 @@ ISR(TIMER1_COMPA_vect)
 
 
 // Timer 1 Compare B interrrupt
-// This interrupt fires once the desired piulse duration has been sent to the servo
+// This interrupt fires once the desired pulse duration has been sent to the servo
+#if (SERVO_OUTPUT == 3) // Optimised version - Two instructions (Set port bit low and return).
 ISR(TIMER1_COMPB_vect, ISR_NAKED)
 {
-#if (SERVO_OUTPUT == 3) 
-    // Optimised Clear of the servo pin.
-    PORTD &= 0xF7;
-#else
-    digitalWrite(SERVO_PIN, LOW);
-#endif            
-    reti();
+  PORTD &= 0xFE;
+  reti();
 }
-
+#else
+ISR(TIMER1_COMPB_vect)
+{
+  digitalWrite(SERVO_OUTPUT, LOW);
+}
+#endif
 
 // Move the servo to servoDegrees, in timeToTake milliseconds (1/1000 second)
 void setServoPosition(uint8_t servoDegrees, uint16_t timeToTake) {
-    uint16_t newEnd;
-    uint16_t currentEnd;
-    int16_t  newStep;
+    int16_t newEnd;
+    int16_t currentEnd;
+    int16_t newStep;
   
-    Serial.print(FM("Servo: move to "));
-    Serial.print(servoDegrees);
-    Serial.print(FM(" degrees, over "));
-    Serial.print(timeToTake);
-    Serial.println(FM(" ms"));
-    
     // Make sure the degrees are 0 - 180
     if (servoDegrees > 180)
         servoDegrees = 180;
@@ -117,14 +143,30 @@ void setServoPosition(uint8_t servoDegrees, uint16_t timeToTake) {
     
     // If the servo is already in this position, then don't do anything
     currentEnd = (int16_t)OCR1B;
+    
     if (newEnd != currentEnd) {
         if (timeToTake != 0) {
             // Figure out the timer increment to achieve the end value
-            newStep = (newEnd - currentEnd) / (timeToTake / 20);
+            newStep = ((newEnd - currentEnd) << 4) / (timeToTake / (SERVO_MS_PER_S/SERVO_HZ));
+            // Round - Away from Zero.
+            if (newEnd > currentEnd) {
+              newStep = (newStep + 8) >> 4; 
+            } else {
+              newStep = (newStep - 8) >> 4; 
+            }              
+            
+            if (newStep == 0) { // Underflow to correct
+              if (newEnd > currentEnd) {
+                newStep = 1;
+              } else {
+                newStep = -1;
+              }              
+            }
         } else {
             // Immediate Update
             newStep = 0;            
         }
+        
         cli();                    // Prevent a Servo Pulse mid way through an update.
         servoEndValue = newEnd;   // The desired pulse width
         servoIncrement = newStep; // The amount to increase/decrease the pulse every interrupt
@@ -134,8 +176,12 @@ void setServoPosition(uint8_t servoDegrees, uint16_t timeToTake) {
 
 
 // Convert degrees (0-180) to a timer counter value
-uint16_t degreesToTimerCounter(uint16_t servoDegrees) {
+int16_t degreesToTimerCounter(uint16_t servoDegrees) {
   // Get the pulse duration in microseconds (as a timer value);
-  return (map(servoDegrees, 0, 180, MIN_PULSE_WIDTH, MAX_PULSE_WIDTH) << 1);
+  return (map(servoDegrees, 0, 180, MIN_PULSE_WIDTH, MAX_PULSE_WIDTH));
+}
+
+bool ServoMoving(void) {
+  return ((uint16_t)OCR1B != servoEndValue);
 }
 
