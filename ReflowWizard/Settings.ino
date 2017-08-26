@@ -10,12 +10,13 @@
 // instead chose to just offset the temperature by 150C, making the range 25 to 130 instead
 // of 175 to 280.
 
+#if 0
 #include <EEPROM.h>
-
+#endif
 
 // Get the setting from EEPROM
 int getSetting(int settingNum) {
-  int val = EEPROM.read(settingNum);
+  int val = 0; //EEPROM.read(settingNum);
   
   // The maximum temperature has an offset to allow it to be saved in 8-bits (0 - 255)
   if (settingNum == SETTING_MAX_TEMPERATURE)
@@ -42,31 +43,31 @@ void setSetting(int settingNum, int value) {
     case SETTING_D6_TYPE:
     case SETTING_D7_TYPE:
       // The element has been reconfigured so reset the duty cycles and restart learning
-      EEPROM.write(SETTING_SETTINGS_CHANGED, true);
-      EEPROM.write(SETTING_LEARNING_MODE, true);
-      EEPROM.write(settingNum, value);
+      //EEPROM.write(SETTING_SETTINGS_CHANGED, true);
+      //EEPROM.write(SETTING_LEARNING_MODE, true);
+      //EEPROM.write(settingNum, value);
       Serial.println(F("Settings changed!  Duty cycles have been reset and learning mode has been enabled"));
       break;
       
     case SETTING_MAX_TEMPERATURE:
       // Enable learning mode if the maximum temperature has changed a lot
       if (abs(getSetting(settingNum) - value) > 5)
-        EEPROM.write(SETTING_LEARNING_MODE, true);
+        //EEPROM.write(SETTING_LEARNING_MODE, true);
       // Write the new maximum temperature
-      EEPROM.write(settingNum, value - TEMPERATURE_OFFSET);
+      //EEPROM.write(settingNum, value - TEMPERATURE_OFFSET);
       break;
       
     case SETTING_BAKE_TEMPERATURE:
-      EEPROM.write(settingNum, value / BAKE_TEMPERATURE_STEP);
+      //EEPROM.write(settingNum, value / BAKE_TEMPERATURE_STEP);
       break;
 
     default:
-      EEPROM.write(settingNum, value);
+      //EEPROM.write(settingNum, value);
       break;
   }
 }
 
-
+#if 0
 void InitializeSettingsIfNeccessary() {
   // Does the EEPROM need to be initialized?
   if (getSetting(SETTING_EEPROM_NEEDS_INIT)) {
@@ -91,7 +92,7 @@ void InitializeSettingsIfNeccessary() {
     setSetting(SETTING_BAKE_TEMPERATURE, BAKE_MIN_TEMPERATURE);
   }
 }
-
+#endif
 
 // Returns the bake duration, in seconds (max 65536 = 18 hours)
 uint16_t getBakeSeconds(int duration)

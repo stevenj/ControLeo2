@@ -1,3 +1,117 @@
+// Configuration Data Handler
+// We have a memory configuration and a EEProm one.
+// The Memory one is active, the EEProm one is read at start, and saved when changed (committed).
+#include "Config.h"
+#include <avr/eeprom.h>
+#include "Relays.h"
+
+#define EEPROM_START (0)
+#define GLOBAL_CONFIG_START (EEPROM_START)
+#define GLOBAL_CONFIG_SIZE  (sizeof(Global_Settings_t))
+#define MODE_CONFIG_START   (32)
+#define MODE_CONFIG_SIZE    (sizeof(Mode_Settings_t))
+#define MAX_MODES           (16)
+
+Global_Settings_t GlobalSettings;
+uint8_t           CurrentMode;
+
+// Menu List to match Relay Setting Enum.  
+const PROGMEM char listRelayType[] = "Unused|Fan:Conv|Fan:Cool|E:Bottom|E:Boost|E:Top";
+
+const PROGMEM Global_Settings_t DefaultGlobalSettings = {
+  ControLeo2_Relays::RELAY_UNUSED, // SG_D4_TYPE - Default to Unused because there are no safe assumptions about what they could be connected to.
+  ControLeo2_Relays::RELAY_UNUSED, // SG_D5_TYPE
+  ControLeo2_Relays::RELAY_UNUSED, // SG_D6_TYPE
+  ControLeo2_Relays::RELAY_UNUSED, // SG_D7_TYPE
+
+  100, // 0,                               // SG_D4_MAXPWR (0%)
+  100,  // 0,                               // SG_D5_MAXPWR (0%)
+  100,  // 0,                               // SG_D6_MAXPWR (0%)
+  100,  // 0,                               // SG_D7_MAXPWR (0%)
+
+  (50/2),       // SG_COOL_TEMPERATURE (50 degrees C)
+  (250/2),      // SG_MAX_TEMPERATURE  (250 degrees C)
+  (280/2),      // SG_OVER_TEMPERATURE (280 degrees C)
+
+  45,           // SG_SERVO_RETRACT_DEG (45 Degree)
+  90,           // SG_SERVO_ARMED_DEG   (90 Degree)
+  135,          // SG_SERVO_OPEN_DEG    (135 Degree)
+  15,           // SG_SERVO_OPEN_TIME   (1.5 Seconds)
+  
+  0xFF,         // Check if Global Settings are correct - Always Last Element  
+};
+
+
+
+bool CheckConfig(uint16_t start, uint8_t size, uint8_t &check_value) {
+  // Calculate and verify a check byte in a range of eeprom.
+  // start = eeprom start address
+  // size  = size of eeprom data (Can only be 2-255 bytes big)  (last byte = check digit)
+  // check_value is returned with the calculated check value (regardless of if the check is correct or not)
+  // return true if the buffer checks OK, false otherwise.
+
+  check_value = 0xA5; // Starting Value
+  size = size - 1;    // Remove check digit from data
+  while (size > 0) {
+    check_value ^= eeprom_read_byte((const uint8_t *)start);
+    start++;
+    size--;
+  }
+  // Safety check, blank state is 0xFF, to ensure that a 0xFF result is made into something not 0xFF.
+  if (check_value == 0xFF) check_value = 0x5A; 
+  
+  return (check_value == eeprom_read_byte((const uint8_t *)start));
+}
+
+void ReadGlobalConfig(void) {
+  uint8_t check_value;
+
+  // If Global Config reloaded, always reset current Mode to first Mode
+  CurrentMode = 0;
+  
+  if (CheckConfig(GLOBAL_CONFIG_START, GLOBAL_CONFIG_SIZE, check_value)) {
+    // Read config from flash
+    eeprom_read_block (&GlobalSettings,
+                       (void *)GLOBAL_CONFIG_START,
+                       GLOBAL_CONFIG_SIZE);
+  } else {
+    // Default Config
+    memcpy_P( &GlobalSettings,
+              &DefaultGlobalSettings,
+              GLOBAL_CONFIG_SIZE);
+  }
+  
+}
+
+uint16_t readGlobalSetting(SG_Entries_t entry) {
+  uint16_t value = GlobalSettings[entry];
+  
+  // Check temp entries, and return actual value.
+  if ((entry == SG_COOL_TEMPERATURE) ||
+      (entry == SG_MAX_TEMPERATURE)  ||
+      (entry == SG_OVER_TEMPERATURE)) {
+    value *= 2;
+  } 
+  
+  return value;
+}
+
+void writeGlobalSetting(SG_Entries_t entry, uint16_t value) {
+  // Check temp entries, and store corrected temp value (div 2).
+  if ((entry == SG_COOL_TEMPERATURE) ||
+      (entry == SG_MAX_TEMPERATURE)  ||
+      (entry == SG_OVER_TEMPERATURE)) {
+    value /= 2;
+  }
+
+  if (value != GlobalSettings[entry]) {
+    GlobalSettings[entry] = (uint8_t)value;
+    GlobalSettings[SG_CHECK_VALUE] = 0xFF; // Mark Global Settings as DIRTY.
+  }
+}
+
+
+#if 0
 // Setup menu
 // Called from the main loop
 // Allows the user to configure the outputs and maximum temperature
@@ -235,7 +349,7 @@ boolean Config() {
   }
   return true;
 }
-
+#endif
 
 void displayMaxTemperature(int maxTemperature) {
   lcd.PrintInt(0,1,3,maxTemperature);

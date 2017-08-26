@@ -111,8 +111,6 @@
 * 3.0       Heavily Modified, Changes to UI and Multiple profiles added.            
 *           Eliminate Floating point.
 *******************************************************************************/
-
-
 // ***** INCLUDES *****
 #include "ControLeo2.h"
 #include "ReflowWizard.h"
@@ -125,13 +123,11 @@
 ControLeo2_LCD       lcd;
 ControLeo2_Buttons   buttons;
 ControLeo2_MAX31855  temps;
+ControLeo2_Relays    relays;
 
 int mode = 0;
 
-void setup() {
-    // Log data to the computer using USB
-    //uint32_t start = micros();
-     
+void setup() {    
     // *********** Start of ControLeo2 initialization ***********
   
     // Set the relays as outputs and turn them off
@@ -140,42 +136,54 @@ void setup() {
         pinMode(i, OUTPUT);
         digitalWrite(i, LOW);
     }
-
-    // Initialize the timer used to control the servo
-    // initializeServo();
-    
+   
     // Initialize the Speaker
     initTones();
 
     Serial.begin(115200); 
+
     // wait for serial port to connect OR Timeout.
-    //while ((!Serial) || ((micros() - start) > 1000000)) { } 
+    //while ((!Serial)) && ((micros() < 2000000))) { } 
+    while (!Serial) { } 
       
-    Serial.println(FM("Reflow Wizard - ControLeo2 Oven Controller - V3.0"));
+    Serial.println(FM("Reflow Wizard V3.0 - ControLeo2 Oven Controller"));
+    Serial.println(micros());
 
     // LCD Initialisation, Custom Font and Title Messages
     lcd.defineCustomChars(custom_chars);
     lcd.PrintStr(0,0, FM("ReflowWiz - V3.0"));
-    lcd.ScrollLine(0,2,FM("Reflow Wizard - ControLeo2 Oven Controller - V3.0"));
-    
-  
-    // Write the initial message on the LCD screen
-    lcdPrintLine_P(0, PSTRM("   ControLeo2"));
-    lcdPrintLine_P(1, PSTRM("Reflow Oven v3.0"));
+    lcd.ScrollLine(0,2,FM("Reflow Wizard V3.0 - ControLeo2 Oven Controller"));
+      
     delay(100);
     playTones(TUNE_STARTUP);
     delay(3000);
-    
+
+    // Read the global configuration values
+    ReadGlobalConfig();
+
+    // Initialize the timer used to control the servo
+    initializeServo();
+
+    relays.SetRelay(ControLeo2_Relays::RELAY_COOLING_FAN, 0);
+    relays.SetRelay(ControLeo2_Relays::RELAY_CONVECTION_FAN, 10);
+    relays.SetRelay(ControLeo2_Relays::RELAY_BOTTOM_ELEMENT, 20);
+    relays.SetRelay(ControLeo2_Relays::RELAY_BOOST_ELEMENT, 30);
+    relays.SetRelay(ControLeo2_Relays::RELAY_TOP_ELEMENT, 40);
+    relays.SetRelay(ControLeo2_Relays::RELAY_D4, 96);
+    relays.SetRelay(ControLeo2_Relays::RELAY_D5, 97);
+    relays.SetRelay(ControLeo2_Relays::RELAY_D6, 98);
+    relays.SetRelay(ControLeo2_Relays::RELAY_D7, 99);
+
     // Initialize the EEPROM, after flashing bootloader
-    InitializeSettingsIfNeccessary();
-    lcd.clear();
+    // InitializeSettingsIfNeccessary();
+    // lcd.clear();
     
     // Go straight to reflow menu if learning is complete
-    if (getSetting(SETTING_LEARNING_MODE) == false)
-        mode = 2;
+    //if (getSetting(SETTING_LEARNING_MODE) == false)
+    //    mode = 2;
       
     // Make sure the oven door is closed
-    setServoPosition(getSetting(SETTING_SERVO_CLOSED_DEGREES), 1000);
+    //setServoPosition(getSetting(SETTING_SERVO_CLOSED_DEGREES), 1000);
 
     InitMenu();
   
@@ -201,9 +209,15 @@ void refresh()
     static unsigned long previous_time = 0;
     unsigned long current_time  = micros();
     int16_t temperature;
-    
+
+    // Get newest temperature data, as required.
     temps.RefreshTemps();
-    
+
+    // Refresh Relay PWM, as required.
+    relays.ProcessRelays();
+
+    // Put a Temperature Overlay on the LCD Screen Data and Redraw the LCD 
+    // at the required refresh rate.
     if ((current_time - previous_time) >= (1000000 / DISPLAY_REFRESH_RATE_HZ)) {
         // Get Latest Temperature Readings.
         // Draw Temperature Overlay on screen.
@@ -236,6 +250,8 @@ void loop()
   static unsigned long nextLoopTime = 50; // Should be 3000 + 100 + fudge factor + 50 - but no harm making it 50!
 #endif
   refresh();
+
+  // Simple Heater Test
 
 #if 0
   static bool prevMenuRun = true;

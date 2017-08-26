@@ -2,6 +2,7 @@
 #ifndef REFLOW_WIZARD_H
 #define REFLOW_WIZARD_H
 
+#if 0 // New Menu System
 // Main menu modes
 #define MODE_TESTING                         0
 #define MODE_CONFIG                          1
@@ -10,6 +11,7 @@
 #define NO_OF_MODES                          4
 
 #define NEXT_MODE                            false
+#endif
 
 // Output type
 #define TYPE_UNUSED                          0

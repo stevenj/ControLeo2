@@ -7,6 +7,10 @@
 #include "MD_Menu.h"
 #include "MD_Menu_lib.h"
 
+// Temporary Buffers used to build strings.
+static char temp_buf1[MAX_TEMPSTR_SIZE];
+static char temp_buf2[MAX_TEMPSTR_SIZE];
+
 /**
  * \file
  * \brief Main code file for MD_Menu library
@@ -182,18 +186,18 @@ char *MD_Menu::listItem(const /*PROGMEM*/ char *p, uint8_t idx, char *buf, uint8
   return(buf);
 }
 
-void MD_Menu::strPreamble(char *psz, mnuInput_t *mInp)
+void MD_Menu::strPreamble(char *psz, uint8_t psz_size, mnuInput_t *mInp)
 // Create the start to a variable CB_DISP
 {
-  strcpy(psz, mInp->label);
-  strcat(psz, FLD_PROMPT);
-  strcat(psz, FLD_DELIM_L);
+  strlcpy(psz, mInp->label, psz_size);
+  strlcat_P(psz, FLD_PROMPT, psz_size);
+  strlcat_P(psz, FLD_DELIM_L, psz_size);
 }
 
-void MD_Menu::strPostamble(char *psz, mnuInput_t *mInp __attribute__((__unused__)))
+void MD_Menu::strPostamble(char *psz, uint8_t psz_size, mnuInput_t *mInp __attribute__((__unused__)))
 // Attach the tail of the variable CB_DISP
 {
-  strcat(psz, FLD_DELIM_R);
+  strlcat_P(psz, FLD_DELIM_R, psz_size);
 }
 
 bool MD_Menu::processList(userNavAction_t nav, mnuInput_t *mInp)
@@ -216,7 +220,7 @@ bool MD_Menu::processList(userNavAction_t nav, mnuInput_t *mInp)
     }
     else
     {
-      _pValue = mInp->cbVR(mInp->id, true);
+      _pValue = mInp->cbVR(mInp->id, VAL_OP_GET);
 
       if (_pValue == nullptr)
       {
@@ -269,7 +273,7 @@ bool MD_Menu::processList(userNavAction_t nav, mnuInput_t *mInp)
 
   case NAV_SEL:
     *((uint8_t*)_pValue) = _iValue;
-    mInp->cbVR(mInp->id, false);
+    mInp->cbVR(mInp->id, VAL_OP_SET);
     endFlag = true;
     break;
 
@@ -279,14 +283,14 @@ bool MD_Menu::processList(userNavAction_t nav, mnuInput_t *mInp)
 
   if (update)
   {
-    char szItem[mInp->fieldWidth + 1];
-    char sz[INP_PRE_SIZE(mInp) + sizeof(szItem) + INP_POST_SIZE(mInp) + 1];
+    //char szItem[mInp->fieldWidth + 1];
+    //char sz[INP_PRE_SIZE(mInp) + sizeof(szItem) + INP_POST_SIZE(mInp) + 1];
 
-    strPreamble(sz, mInp);
-    strcat(sz, listItem(mInp->pList, _iValue, szItem, sizeof(szItem)));
-    strPostamble(sz, mInp);
+    strPreamble(temp_buf1, sizeof(temp_buf1), mInp);
+    strcat(temp_buf1, listItem(mInp->pList, _iValue, temp_buf2, mInp->fieldWidth + 1));
+    strPostamble(temp_buf1, sizeof(temp_buf1), mInp);
 
-    _cbDisp(DISP_L1, sz);
+    _cbDisp(DISP_L1, temp_buf1);
   }
 
   return(endFlag);
@@ -303,7 +307,7 @@ bool MD_Menu::processBool(userNavAction_t nav, mnuInput_t *mInp)
   {
   case NAV_NULL:    // this is to initialise the CB_DISP
     {
-      _pValue = mInp->cbVR(mInp->id, true);
+      _pValue = mInp->cbVR(mInp->id, VAL_OP_GET);
 
       if (_pValue == nullptr)
       {
@@ -326,7 +330,7 @@ bool MD_Menu::processBool(userNavAction_t nav, mnuInput_t *mInp)
 
   case NAV_SEL:
     *((bool *)_pValue) = _bValue;
-    mInp->cbVR(mInp->id, false);
+    mInp->cbVR(mInp->id, VAL_OP_SET);
     endFlag = true;
     break;
 
@@ -336,13 +340,13 @@ bool MD_Menu::processBool(userNavAction_t nav, mnuInput_t *mInp)
 
   if (update)
   {
-    char sz[INP_PRE_SIZE(mInp) + strlen(INP_BOOL_T) + INP_POST_SIZE(mInp) + 1];
+    // char sz[INP_PRE_SIZE(mInp) + strlen(INP_BOOL_T) + INP_POST_SIZE(mInp) + 1];
 
-    strPreamble(sz, mInp);
-    strcat(sz, _bValue ? INP_BOOL_T : INP_BOOL_F);
-    strPostamble(sz, mInp);
+    strPreamble(temp_buf1, sizeof(temp_buf1), mInp);
+    strlcat_P(temp_buf1, _bValue ? INP_BOOL_T : INP_BOOL_F, sizeof(temp_buf1));
+    strPostamble(temp_buf1, sizeof(temp_buf1), mInp);
 
-    _cbDisp(DISP_L1, sz);
+    _cbDisp(DISP_L1, temp_buf1);
   }
 
   return(endFlag);
@@ -390,6 +394,30 @@ bool MD_Menu::processInt(userNavAction_t nav, mnuInput_t *mInp, uint16_t incDelt
 // Processing for Integer (all sizes) value input
 // Return true when the edit cycle is completed
 {
+  auto writeBack_iValue = [&]( int32_t iValue ) -> void
+  {
+    switch (mInp->action)
+    {
+    case INP_INT8:  *((int8_t*)_pValue)  = iValue; break;
+    case INP_INT16: *((int16_t*)_pValue) = iValue; break;
+    case INP_INT32: // int32 and float write the same way 
+    case INP_FLOAT: *((int32_t*)_pValue) = iValue; break;
+    default: break;
+    }
+  };
+
+  auto read_iValue = [&]( ) -> int32_t
+  {
+    switch (mInp->action)
+    {
+    case INP_INT8:  return *((int8_t*)_pValue);  break;
+    case INP_INT16: return *((int16_t*)_pValue); break;
+    case INP_INT32: // int32 and float read the same way
+    case INP_FLOAT: return *((int32_t*)_pValue); break;
+    default: return 0; break;
+    }
+  };
+
   bool endFlag = false;
   bool update = false;
 
@@ -397,7 +425,7 @@ bool MD_Menu::processInt(userNavAction_t nav, mnuInput_t *mInp, uint16_t incDelt
   {
   case NAV_NULL:    // this is to initialise the CB_DISP
     {
-      _pValue = mInp->cbVR(mInp->id, true);
+      _pValue = mInp->cbVR(mInp->id, VAL_OP_GET);
 
       if (_pValue == nullptr)
       {
@@ -406,13 +434,7 @@ bool MD_Menu::processInt(userNavAction_t nav, mnuInput_t *mInp, uint16_t incDelt
       }
       else
       {
-        switch (mInp->action)
-        {
-        case INP_INT8:  _iValue = *((int8_t*)_pValue);  break;
-        case INP_INT16: _iValue = *((int16_t*)_pValue); break;
-        case INP_INT32: _iValue = *((int32_t*)_pValue); break;
-        default: break;
-        }
+        _iValue = read_iValue();
         update = true;
       }
     }
@@ -435,14 +457,8 @@ bool MD_Menu::processInt(userNavAction_t nav, mnuInput_t *mInp, uint16_t incDelt
     break;
 
   case NAV_SEL:
-    switch (mInp->action)
-    {
-    case INP_INT8:  *((int8_t*)_pValue) = _iValue;  break;
-    case INP_INT16: *((int16_t*)_pValue) = _iValue; break;
-    case INP_INT32: *((int32_t*)_pValue) = _iValue; break;
-    default: break;
-    }
-    mInp->cbVR(mInp->id, false);
+    writeBack_iValue( _iValue );
+    mInp->cbVR(mInp->id, VAL_OP_SET);
     endFlag = true;
     break;
 
@@ -452,18 +468,45 @@ bool MD_Menu::processInt(userNavAction_t nav, mnuInput_t *mInp, uint16_t incDelt
 
   if (update)
   {
-    char sz[INP_PRE_SIZE(mInp) + mInp->fieldWidth + INP_POST_SIZE(mInp) + 1];
+    int32_t _iBackup = read_iValue();
+    
+    if (mInp->action == INP_FLOAT) {
+      uint16_t divisor = 1;
+      //uint8_t dp;
+      //char sz[INP_PRE_SIZE(mInp) + mInp->fieldWidth + INP_POST_SIZE(mInp) + 1];
+  
+      for (uint8_t i = 0; i < mInp->range.base; i++)
+        divisor *= 10;
+  
+      strPreamble(temp_buf1, sizeof(temp_buf1), mInp);
+      ltostr(temp_buf1 + strlen(temp_buf1), mInp->fieldWidth - (mInp->range.base + 1) + 1, _iValue / divisor, 10);
+      strlcat_P(temp_buf1, DECIMAL_POINT, sizeof(temp_buf1));
+      //dp = strlen(temp_buf1);
+      //temp_buf1[strlen(temp_buf1) + 1] = '\0';
+      //temp_buf1[strlen(temp_buf1)] = DECIMAL_POINT;
+      ltostr(temp_buf1 + strlen(temp_buf1), (mInp->range.base + 1), abs(_iValue % divisor), 10, true);
+  
+      strPostamble(temp_buf1, sizeof(temp_buf1), mInp);
+    } else { // Display Integer
+      //char sz[INP_PRE_SIZE(mInp) + mInp->fieldWidth + INP_POST_SIZE(mInp) + 1]; 
+      strPreamble(temp_buf1, sizeof(temp_buf1), mInp);
+      ltostr(temp_buf1 + strlen(temp_buf1), mInp->fieldWidth + 1, _iValue, mInp->range.base);
+      strPostamble(temp_buf1, sizeof(temp_buf1), mInp);
+    }    
+  
+    _cbDisp(DISP_L1, temp_buf1);
 
-    strPreamble(sz, mInp);
-    ltostr(sz + strlen(sz), mInp->fieldWidth + 1, _iValue, mInp->range.base);
-    strPostamble(sz, mInp);
-
-    _cbDisp(DISP_L1, sz);
+    // Try the value if its a hardware setting.
+    writeBack_iValue( _iValue );      // Temporarily set the new value
+    mInp->cbVR(mInp->id, VAL_OP_TRY); // Try It
+    writeBack_iValue( _iBackup );     // Set back to original value
+    
   }
 
   return(endFlag);
 }
 
+#if 0
 bool MD_Menu::processFloat(userNavAction_t nav, mnuInput_t *mInp, uint16_t incDelta)
 // Processing for Floating number representation value input
 // The number is actually a uint32, where the last FLOAT_DECIMALS digits are taken
@@ -479,7 +522,7 @@ bool MD_Menu::processFloat(userNavAction_t nav, mnuInput_t *mInp, uint16_t incDe
   {
   case NAV_NULL:    // this is to initialise the CB_DISP
   {
-    _pValue = mInp->cbVR(mInp->id, true);
+    _pValue = mInp->cbVR(mInp->id, VAL_OP_GET);
 
     if (_pValue == nullptr)
     {
@@ -495,8 +538,8 @@ bool MD_Menu::processFloat(userNavAction_t nav, mnuInput_t *mInp, uint16_t incDe
   break;
 
   case NAV_INC:
-    if (_iValue + (incDelta * mInp->range.base) < mInp->range.max)
-      _iValue += (incDelta * mInp->range.base);
+    if (_iValue + incDelta < mInp->range.max)
+      _iValue += incDelta;
     else
       _iValue = mInp->range.max;
     update = true;
@@ -512,7 +555,7 @@ bool MD_Menu::processFloat(userNavAction_t nav, mnuInput_t *mInp, uint16_t incDe
 
   case NAV_SEL:
     *((int32_t*)_pValue) = _iValue;
-    mInp->cbVR(mInp->id, false);
+    mInp->cbVR(mInp->id, VAL_OP_SET);
     endFlag = true;
     break;
 
@@ -528,19 +571,20 @@ bool MD_Menu::processFloat(userNavAction_t nav, mnuInput_t *mInp, uint16_t incDe
     for (uint8_t i = 0; i < FLOAT_DECIMALS; i++)
       divisor *= 10;
 
-    strPreamble(sz, mInp);
+    strPreamble(sz, sizeof(sz), mInp);
     ltostr(sz + strlen(sz), mInp->fieldWidth - (FLOAT_DECIMALS + 1) + 1, _iValue / divisor, 10);
     sz[strlen(sz) + 1] = '\0';
     sz[strlen(sz)] = DECIMAL_POINT;
     ltostr(sz + strlen(sz), (FLOAT_DECIMALS + 1), abs(_iValue % divisor), 10, true);
 
-    strPostamble(sz, mInp);
+    strPostamble(sz, sizeof(sz), mInp);
 
     _cbDisp(DISP_L1, sz);
   }
 
   return(endFlag);
 }
+#endif
 
 bool MD_Menu::processRun(userNavAction_t nav, mnuInput_t *mInp)
 // Processing for Run user code input field.
@@ -549,17 +593,17 @@ bool MD_Menu::processRun(userNavAction_t nav, mnuInput_t *mInp)
 {
   if (nav == NAV_NULL)    // initialise the CB_DISP
   {
-    char sz[INP_PRE_SIZE(mInp) + INP_POST_SIZE(mInp) + 1];
+    // char sz[INP_PRE_SIZE(mInp) + INP_POST_SIZE(mInp) + 1];
 
-    strcpy(sz, FLD_DELIM_L);
-    strcat(sz, mInp->label);
-    strcat(sz, FLD_DELIM_R);
+    strlcpy_P(temp_buf1, FLD_DELIM_L, sizeof(temp_buf1));
+    strlcat(temp_buf1, mInp->label, sizeof(temp_buf1));
+    strlcat_P(temp_buf1, FLD_DELIM_R, sizeof(temp_buf1));
 
-    _cbDisp(DISP_L1, sz);
+    _cbDisp(DISP_L1, temp_buf1);
   }
   else if (nav == NAV_SEL)
   {
-    mInp->cbVR(mInp->id, false);
+    mInp->cbVR(mInp->id, VAL_OP_SET);
     return(true);
   }
 
@@ -567,11 +611,25 @@ bool MD_Menu::processRun(userNavAction_t nav, mnuInput_t *mInp)
 }
 
 void MD_Menu::handleInput(bool bNew)
-{
+{ 
   bool ended = false;
   uint16_t incDelta = 1;
   mnuItem_t *mi;
   mnuInput_t *me;
+
+  auto runAction = [&]( userNavAction_t nav ) -> void
+  {
+    switch (me->action)
+    {
+    case INP_LIST: ended = processList(nav, me); break;
+    case INP_BOOL: ended = processBool(nav, me); break;
+    case INP_INT8:
+    case INP_INT16:
+    case INP_INT32: // ended = processInt(nav, me, incDelta); break;
+    case INP_FLOAT: ended = processInt(nav, me, incDelta); break; // ended = processFloat(NAV_NULL, me, incDelta); break;
+    case INP_RUN: ended = processRun(nav, me); break;
+    }
+  };
 
   if (bNew)
   {
@@ -585,17 +643,20 @@ void MD_Menu::handleInput(bool bNew)
     {
       SET_FLAG(F_INEDIT);
       timerStart();
-
+#if 1
+      runAction(NAV_NULL);
+#else
       switch (me->action)
       {
       case INP_LIST: ended = processList(NAV_NULL, me); break;
       case INP_BOOL: ended = processBool(NAV_NULL, me); break;
       case INP_INT8:
       case INP_INT16:
-      case INP_INT32: ended = processInt(NAV_NULL, me, incDelta); break;
-      case INP_FLOAT: ended = processFloat(NAV_NULL, me, incDelta); break;
+      case INP_INT32: // ended = processInt(NAV_NULL, me, incDelta); break;
+      case INP_FLOAT: ended = processInt(NAV_NULL, me, incDelta); break; // ended = processFloat(NAV_NULL, me, incDelta); break;
       case INP_RUN: ended = processRun(NAV_NULL, me); break;
       }
+#endif      
     }
   }
   else
@@ -610,16 +671,20 @@ void MD_Menu::handleInput(bool bNew)
       mi = loadItem(_mnuStack[_currMenu].idItmCurr);
       me = loadInput(mi->actionId);
 
+#if 1
+      runAction(nav);
+#else      
       switch (me->action)
       {
       case INP_LIST: ended = processList(nav, me); break;
       case INP_BOOL: ended = processBool(nav, me); break;
       case INP_INT8:
       case INP_INT16:
-      case INP_INT32: ended = processInt(nav, me, incDelta); break;
-      case INP_FLOAT: ended = processFloat(nav, me, incDelta); break;
+      case INP_INT32: // ended = processInt(nav, me, incDelta); break;
+      case INP_FLOAT: ended = processInt(nav, me, incDelta); break; // ended = processFloat(nav, me, incDelta); break;
       case INP_RUN: ended = processRun(nav, me); break;
       }
+#endif      
     }
   }
 
@@ -633,6 +698,7 @@ void MD_Menu::handleInput(bool bNew)
 void MD_Menu::handleMenu(bool bNew)
 {
   bool update = false;
+  userNavAction_t nav = NAV_NULL;
 
   if (bNew)
   {
@@ -647,7 +713,7 @@ void MD_Menu::handleMenu(bool bNew)
   else
   {
     uint16_t incDelta = 1;
-    userNavAction_t nav = _cbNav(incDelta);
+    nav = _cbNav(incDelta);
 
     if (nav != NAV_NULL) timerStart();
 
@@ -717,6 +783,10 @@ void MD_Menu::handleMenu(bool bNew)
       }
       break;
 
+    case NAV_HELP:
+      update = true;
+      break;
+
     case NAV_NULL:
       break;
     }
@@ -726,13 +796,17 @@ void MD_Menu::handleMenu(bool bNew)
   {
     mnuItem_t *mi = loadItem(_mnuStack[_currMenu].idItmCurr);
 
+    if (nav == NAV_HELP) {
+      _cbDisp(DISP_HELP, mi->HelpMsg);
+    }
+
     if (mi != nullptr)
     {
-      char sz[strlen(mi->label) + strlen(MNU_DELIM_L) + strlen(MNU_DELIM_R) + 1]; // temporary string
+      char sz[MAX_TEMPSTR_SIZE + 1]; // temporary string
 
-      strcpy(sz, MNU_DELIM_L);
-      strcat(sz, mi->label);
-      strcat(sz, MNU_DELIM_R);
+      strlcpy_P(sz, MNU_DELIM_L, MAX_TEMPSTR_SIZE + 1);
+      strlcat(sz, mi->label, MAX_TEMPSTR_SIZE + 1);
+      strlcat_P(sz, MNU_DELIM_R, MAX_TEMPSTR_SIZE + 1);
 
       _cbDisp(DISP_L1, sz);
     }
@@ -744,9 +818,9 @@ bool MD_Menu::runMenu(bool bStart)
   // check if we need to process anything
   if (!TEST_FLAG(F_INMENU) && !bStart)
   {
-    uint16_t dummy;
+    // uint16_t dummy;
 
-    bStart = (TEST_FLAG(F_AUTOSTART) && _cbNav(dummy) == NAV_SEL);
+    bStart = (TEST_FLAG(F_AUTOSTART) /* && _cbNav(dummy) == NAV_SEL */ ); // We always AUTORUN, dont need a keypress to do it.
     if (bStart) { MD_PRINTS("\nrunMenu: Auto Start detected"); }
     if (!bStart) return(false);   // nothing to do
   }

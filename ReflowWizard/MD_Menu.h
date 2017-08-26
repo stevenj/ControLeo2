@@ -188,9 +188,11 @@ May 2017 version 1.0.0
  */
 
 // Label size definitions
+#define MAX_TEMPSTR_SIZE (16+1)           ///< Maximum String Size for Temporary Buffers
+
 const uint8_t HEADER_LABEL_SIZE = 16;   ///< Displayed length of a menu header label
-const uint8_t ITEM_LABEL_SIZE = 16;     ///< Displayed length of a menu item label
-const uint8_t INPUT_LABEL_SIZE = 16;    ///< Displayed length of an input item label
+const uint8_t ITEM_LABEL_SIZE = 9;     ///< Displayed length of a menu item label
+const uint8_t INPUT_LABEL_SIZE = 9;    ///< Displayed length of an input item label
 
 // Miscellaneous defines
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))  ///< Generic macro for obtaining number of elements of an array
@@ -231,6 +233,7 @@ public:
     NAV_DEC,   ///< DECREMENT. Move to the previous menu item or decrement a value.
     NAV_SEL,   ///< SELECT the current menu item or confirm a new value.
     NAV_ESC,   ///< ESCAPE from current menu or abandon editing a value (remains unchanged).
+    NAV_HELP,  ///< HELP - Display a Help String (TODO)
   };
 
   /**
@@ -255,8 +258,9 @@ public:
   enum userDisplayAction_t
   {
     DISP_CLEAR, ///< Clear the display. Message parameter is not defined
-    DISP_L0,    ///< Display the data provided in line 0 (first line). For single line displays, this should be ignored.
-    DISP_L1,    ///< Display the data provided in line 1 (second line). This must always be implemented.
+    DISP_L0,    ///< Display the data provided in line 0 (first line). For single line displays, this should be ignored. 
+    DISP_L1,    ///< Display the data provided in line 1 (second line). This must always be implemented. 
+    DISP_HELP,  ///< Display a help message (however you like). Text Data is always in Flash.
   };
 
   /**
@@ -266,7 +270,7 @@ public:
   * (eg, switches, rotary encoder) and return one of the userNavAction_t
   * enumerated types to trigger the next menu action.
   */
-  typedef bool(*cbUserDisplay)(userDisplayAction_t action, char *msg);
+  typedef bool(*cbUserDisplay)(userDisplayAction_t action, const char *msg);
 
   /**
   * Menu input type enumerated type specification.
@@ -285,6 +289,12 @@ public:
     INP_RUN,    ///< The item will run a user function
   };
 
+  enum cdValueOp_t 
+  {
+    VAL_OP_GET,   // Get the value
+    VAL_OP_SET,   // Set the value
+    VAL_OP_TRY,   // Try the current value (ie, if a hardware value, feedback its result. eg, a servo will move to match the setting.)
+  };
   /**
   * Data input/output function prototype
   *
@@ -294,7 +304,7 @@ public:
   * data identified by the ID. Return nullptr to stop the menu from
   * editing the value.
   */
-  typedef void*(*cbValueRequest)(mnuId_t id, bool bGet);
+  typedef void*(*cbValueRequest)(mnuId_t id, cdValueOp_t op);
 
   /**
   * Input field defintion
@@ -305,18 +315,19 @@ public:
   */
   struct mnuInput_t
   {
-    mnuId_t id;            ///< Identifier for this item
-    char    label[INPUT_LABEL_SIZE + 1]; ///< Label for this menu item
-    inputAction_t action;  ///< Type of action required for this value
-    cbValueRequest cbVR;   ///< Callback function to get/set the value
-    uint8_t fieldWidth;    ///< Width of the displayed field between delimiters
-    // Would be good to make these a union to save Flash Space, cant work out a viable way to do that, however.
+    mnuId_t        id;                          ///< Identifier for this item
+    char           label[INPUT_LABEL_SIZE + 1]; ///< Label for this menu item
+    inputAction_t  action;                      ///< Type of action required for this value
+    cbValueRequest cbVR;                        ///< Callback function to get/set the value
+    uint8_t        fieldWidth;                  ///< Width of the displayed field between delimiters
+    // A union to save Flash Space
     union {
       struct {
         int32_t min;  ///< min/max values an integer Only for INY_INT* & INP_FLOAT
         int32_t max;  ///< min/max values an integer Only for INY_INT* & INP_FLOAT
-        uint8_t base; ///< number base for display (2 through 16) or floating increment in 1/100 units Only for INY_INT* & INP_FLOAT
+        uint8_t base; ///< number base for display (2 through 16), for a float, number of decimals to show.
       } range;
+      
       const char *pList;   ///< pointer to list string - Only for INP_LIST
     };
   };
@@ -342,10 +353,12 @@ public:
   */
   struct mnuItem_t
   {
-    mnuId_t id;            ///< Identifier for this item
-    char    label[ITEM_LABEL_SIZE + 1]; ///< Label for this menu item
-    mnuAction_t action;    ///< Selecting this item does this action
-    mnuId_t actionId;      ///< Next menu or input field Id
+    mnuId_t     id;                         ///< Identifier for this item
+    //const __FlashStringHelper * label;
+    char        label[ITEM_LABEL_SIZE + 1]; ///< Label for this menu item
+    mnuAction_t action;                     ///< Selecting this item does this action
+    mnuId_t     actionId;                   ///< Next menu or input field Id
+    const char* HelpMsg;                    ///< Optional Help Message
   };
 
   /**
@@ -550,8 +563,8 @@ private:
   mnuInput_t *loadInput(mnuId_t id);      ///< find the input item with the specified ID
   uint8_t    listCount(const /*PROGMEM*/ char *p);  ///< count the items in a list selection string 
   char       *listItem(const /*PROGMEM*/ char *p, uint8_t idx, char *buf, uint8_t bufLen);  ///< extract the idx'th item from the list selection string
-  void       strPreamble(char *psz, mnuInput_t *mInp);  ///< format a preamble to the a variable display
-  void       strPostamble(char *psz, mnuInput_t *mInp); ///< attach a postamble to a variable display
+  void       strPreamble(char *psz, uint8_t psz_size, mnuInput_t *mInp);  ///< format a preamble to the a variable display
+  void       strPostamble(char *psz, uint8_t psz_size, mnuInput_t *mInp); ///< attach a postamble to a variable display
   
   void timerStart(void);    ///< Start (reset) the timout timer
   void timerCheck(void);    ///< Check if timout has expired and reset menu if it has
