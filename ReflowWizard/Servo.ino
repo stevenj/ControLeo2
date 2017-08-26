@@ -1,6 +1,5 @@
-// Timer 1 is used for 2 things:
-// 1. Take thermocouple readings every 200ms (5 times per second)
-// 2. Control the servo used to open the oven door
+// Timer 1 is used for 1 thing:
+// 1. Control the servo used to open the oven door
 //
 // Servo timer interrupt operation
 // ===============================
@@ -21,6 +20,11 @@
 // With a 16MHz clock, the prescaler is set to 8.  This gives a timer speed of 16,000,000 / 8 = 2,000,000. This means
 // the timer counts from 0 to 2,000,000 in one second.  We'd like the interrupt to fire 50 times per second so we set
 // the compare register OCR1A to 2,000,000 / 50 = 40,000.
+// Servo can move bettween 0 Degrees (1ms Pulse) and 180 Degrees (2ms Pulse)
+// 1ms = 2,000,000/1,000 = 2,000
+// 2ms = 2,000,000/500   = 4,000
+// So we can control the servo in up to 2000 steps (0.09 Degrees) and no finer.
+
 #include "ControLeo2.h"
 
 #define SERVO_CLK (16000000)
@@ -181,6 +185,8 @@ int16_t degreesToTimerCounter(uint16_t servoDegrees) {
   return (map(servoDegrees, 0, 180, MIN_PULSE_WIDTH, MAX_PULSE_WIDTH));
 }
 
+// Check if the servo is moving, or stationary. 
+// (Actually just checks if the pulse is changing, servo movement could be delayed from the pulse.)
 bool ServoMoving(void) {
   return ((uint16_t)OCR1B != servoEndValue);
 }
