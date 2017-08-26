@@ -24,4 +24,6 @@
   
 #define FM(string_literal) (reinterpret_cast<const __FlashStringHelper *>(PSTRM(string_literal)))  
 
+#define FLASH_STRING(name) const PROGMEM char name[]
+
 #endif
