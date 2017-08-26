@@ -95,6 +95,9 @@ uint8_t ControLeo2_Buttons::GetKeypress(void) {
 void ControLeo2_Buttons::push_keypress_on_queue(uint8_t keypress) {
     uint8_t next_tail = (_queue_tail+1) & (sizeof(_button_queue)-1);
 
+    //Serial.print("Key Queued : ");
+    //Serial.println(keypress);
+
     if (next_tail != _queue_head) { // Cant add to full queue
       _button_queue[_queue_tail] = keypress;
       _queue_tail = next_tail;
@@ -228,8 +231,7 @@ void ControLeo2_Buttons::ButtonProcessing(void) {
 #endif
 
           _stable_buttons = buttons;
-        }
-      } else {        
+        } else {        
           // Process Long Hold
 #if 1          
           if (_top_press_start != 0) {
@@ -249,7 +251,8 @@ void ControLeo2_Buttons::ButtonProcessing(void) {
           _bot_press_start = ProcessHold(BUTTON_BOT_LONG_HOLD, current_time, _bot_press_start);
           
 #endif          
-      }
+        }
+      }  
     }
     last_buttons = buttons;
 }
