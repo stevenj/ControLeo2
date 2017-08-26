@@ -49,6 +49,8 @@
 #include "MergedFlashData.h"
 #include "ControLeo2_LCD.h"
 #include "ControLeo2_MAX31855.h"
+#include "Relays.h"
 #include "Buttons.h"
+#include "Config.h"
 
 #endif // CONTROLEO2_H
