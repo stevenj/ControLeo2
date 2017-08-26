@@ -179,7 +179,7 @@ void ControLeo2_LCD::PrintInt(uint8_t x, uint8_t y, uint8_t width, uint16_t valu
     if (x + width >= 16) {
       width = 16 - x;
     }
-    ltostr((char*)&_frame_buffer[y][x], width, value, 10, (fill == '0'));
+    ltostr((char*)&_frame_buffer[y][x], width+1, value, 10, (fill == '0'));
 #else  
     char    character;
     uint8_t digit = width;

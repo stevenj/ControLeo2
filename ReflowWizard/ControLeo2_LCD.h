@@ -63,7 +63,7 @@ class ControLeo2_LCD {
         };
       };
 
-      uint8_t _frame_buffer[2][16];
+      uint8_t _frame_buffer[2][16+1];     // Virtual Screen Buffer, (one character wider than needed to accomodate null if std string functions are used on it.)
       uint8_t *_scroll_msg;               // Scrolling message
       union
       {
