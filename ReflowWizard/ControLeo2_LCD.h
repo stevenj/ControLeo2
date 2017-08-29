@@ -26,6 +26,7 @@ class ControLeo2_LCD {
       void PrintInt(uint8_t x, uint8_t y, uint8_t width, uint16_t value);
 
       void ScrollLine(uint8_t y, uint8_t rpt, const __FlashStringHelper* str);
+      bool LineScrolling(void);
 
       void CursorOff(void);
       void CursorOn(uint8_t x, uint8_t y, bool blink, bool underline);

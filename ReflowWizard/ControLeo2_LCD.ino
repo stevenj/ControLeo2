@@ -219,6 +219,10 @@ void ControLeo2_LCD::ScrollLine(uint8_t y, uint8_t rpt, const __FlashStringHelpe
     _scroll_x = -16;  // Start with Spaces.
 }
 
+bool ControLeo2_LCD::LineScrolling(void) {
+  return (_scroll_rpt != 0);
+}
+
 void ControLeo2_LCD::CursorOn(uint8_t x, uint8_t y, bool blink, bool underline) {
     _cursor_on    = underline;
     _cursor_blink = blink;
