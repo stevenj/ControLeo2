@@ -252,6 +252,10 @@ void ControLeo2_MAX31855::RefreshTemps(void) {
             }
         } else {
           fault_count = 0;
+
+          // Linearise the temperature recorded.
+          // _RawTemp[_nexttemp] = LinearizeThermocouple(_RawTemp[_nexttemp], _RawJunctionTemp[_nexttemp]); 
+          
           _nexttemp = (_nexttemp+1) & 0x3; // Step through readings arrays.
         }
         
@@ -262,3 +266,66 @@ void ControLeo2_MAX31855::RefreshTemps(void) {
         digitalWrite(THERMOCOUPLE_CS_PIN, HIGH);
     }
 }
+
+int16_t LinearizeThermocouple(int16_t temp, int16_t juncTemp) {
+  double internalTemp = juncTemp / 4.0;
+  double rawTemp = temp / 4.0;
+  double thermocoupleVoltage= 0;
+  double internalVoltage = 0;
+  double correctedTemp = 0;
+  double totalVoltage = 0;
+  uint8_t i;
+
+  // Steps 1 & 2. Subtract cold junction temperature from the raw thermocouple temperature.
+  thermocoupleVoltage = (rawTemp - internalTemp) * 0.041276;  // C * mv/C = mV
+
+  // Step 3. Calculate the cold junction equivalent thermocouple voltage.
+  // Coefficients and equations available from http://srdata.nist.gov/its90/download/type_k.tab
+  
+  static double c[] = {-0.176004136860E-01,  0.389212049750E-01,  0.185587700320E-04, 
+                       -0.994575928740E-07,  0.318409457190E-09, -0.560728448890E-12,  
+                        0.560750590590E-15, -0.320207200030E-18,  0.971511471520E-22, 
+                       -0.121047212750E-25};
+
+  // Count the the number of coefficients. There are 10 coefficients for positive temperatures (plus three exponential coefficients),
+  // but there are 11 coefficients for negative temperatures.
+  const int cLength = sizeof(c) / sizeof(c[0]);
+
+  // Exponential coefficients. Only used for positive temperatures.
+  const double a0 =  0.118597600000E+00;
+  const double a1 = -0.118343200000E-03;
+  const double a2 =  0.126968600000E+03;
+
+  // From NIST: E = sum(i=0 to n) c_i t^i + a0 exp(a1 (t - a2)^2), where E is the thermocouple voltage in mV and t is the temperature in degrees C.
+  // In this case, E is the cold junction equivalent thermocouple voltage.
+  // Alternative form: C0 + C1*internalTemp + C2*internalTemp^2 + C3*internalTemp^3 + ... + C10*internaltemp^10 + A0*e^(A1*(internalTemp - A2)^2)
+  // This loop sums up the c_i t^i components.
+  for (i = 0; i < cLength; i++) {
+    internalVoltage += c[i] * pow(internalTemp, i);
+  }
+  // This section adds the a0 exp(a1 (t - a2)^2) components.
+  internalVoltage += a0 * exp(a1 * pow((internalTemp - a2), 2));
+
+  // Step 4. Add the cold junction equivalent thermocouple voltage calculated in step 3 to the thermocouple voltage calculated in step 2.
+  totalVoltage = thermocoupleVoltage + internalVoltage;
+
+  if ((totalVoltage > 0) && (totalVoltage < 20.644)) { // Temperature is between 0C and 500C.
+    static double d[] = { 0.000000E+00,  2.508355E+01,  7.860106E-02, 
+                         -2.503131E-01,  8.315270E-02, -1.228034E-02, 
+                          9.804036E-04, -4.413030E-05,  1.057734E-06, 
+                         -1.052755E-08};                  
+    const int dLength = sizeof(d) / sizeof(d[0]);
+    
+    for (i = 0; i < dLength; i++) {
+      correctedTemp += d[i] * pow(totalVoltage, i);
+    }
+    correctedTemp *= 4.0; // integer temps have 2 binary digits places.
+  } else {
+    correctedTemp = temp; // Couldn't convert, so just use original temp.
+  }
+
+  return (int16_t)correctedTemp;
+
+}
+ 
+
