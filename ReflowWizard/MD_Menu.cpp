@@ -230,7 +230,7 @@ bool MD_Menu::processList(userNavAction_t nav, mnuInput_t *mInp)
       else
       {
         _iValue = *((uint8_t*)_pValue);
-        if (_iValue >= size - 1)   // index set incorrectly
+        if (_iValue > size - 1)   // index set incorrectly
           _iValue = 0;
         update = true;
       }
@@ -278,6 +278,7 @@ bool MD_Menu::processList(userNavAction_t nav, mnuInput_t *mInp)
     break;
 
   case NAV_ESC:
+  case NAV_HELP:
     break;
   }
 
@@ -335,6 +336,7 @@ bool MD_Menu::processBool(userNavAction_t nav, mnuInput_t *mInp)
     break;
 
   case NAV_ESC:
+  case NAV_HELP:
     break;
   }
 
@@ -463,6 +465,7 @@ bool MD_Menu::processInt(userNavAction_t nav, mnuInput_t *mInp, uint16_t incDelt
     break;
 
   case NAV_ESC:
+  case NAV_HELP:
     break;
   }
 
@@ -702,6 +705,11 @@ void MD_Menu::handleMenu(bool bNew)
 
   if (bNew)
   {
+    // Enter Menu, so run Enter Menu Callback
+    if (_mnuStack[_currMenu].cbMVR != nullptr) {
+      _mnuStack[_currMenu].cbMVR(_mnuStack[_currMenu].id, VAL_OP_GET);
+    }
+        
     _cbDisp(DISP_CLEAR, nullptr);
     _cbDisp(DISP_L0, _mnuStack[_currMenu].label);
     if (_mnuStack[_currMenu].idItmCurr == 0)
@@ -778,6 +786,10 @@ void MD_Menu::handleMenu(bool bNew)
       }
       else
       {
+        if (_mnuStack[_currMenu].cbMVR != nullptr) {
+          _mnuStack[_currMenu].cbMVR(_mnuStack[_currMenu].id, VAL_OP_SET);
+        }
+        
         _currMenu--;
         handleMenu(true);  // just one level of recursion;
       }

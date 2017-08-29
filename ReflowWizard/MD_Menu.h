@@ -303,6 +303,12 @@ public:
   * When bGet is true, the function must return the pointer to the
   * data identified by the ID. Return nullptr to stop the menu from
   * editing the value.
+  * 
+  * When specified for a Menu, it can control: 
+  * VAL_OP_GET : the Loading of items ready for the submenu
+  * VAL_OP_SET : the Saving of items in the submenu
+  * VAL_OP_TRY : Not Used for a submenu
+  * 
   */
   typedef void*(*cbValueRequest)(mnuId_t id, cdValueOp_t op);
 
@@ -354,7 +360,6 @@ public:
   struct mnuItem_t
   {
     mnuId_t     id;                         ///< Identifier for this item
-    //const __FlashStringHelper * label;
     char        label[ITEM_LABEL_SIZE + 1]; ///< Label for this menu item
     mnuAction_t action;                     ///< Selecting this item does this action
     mnuId_t     actionId;                   ///< Next menu or input field Id
@@ -375,6 +380,7 @@ public:
     mnuId_t idItmStart;  ///< Start item number for menu
     mnuId_t idItmEnd;    ///< End item number for the menu
     mnuId_t idItmCurr;   ///< Current item being processed
+    cbValueRequest cbMVR; ///< Callback function to get/set the values of the submenu
   };
 
   /** @} */
